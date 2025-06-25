@@ -1,0 +1,202 @@
+:root {
+  font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light;
+  color: #1a1a1a;
+  background-color: #fafafa;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  overflow-x: hidden;
+  /* מניעת זום לא רצוי במובייל */
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* מניעת זום בעת לחיצה כפולה על iOS */
+* {
+  touch-action: manipulation;
+}
+
+/* אנימציות חלקות */
+* {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* גלילה חלקה */
+html {
+  scroll-behavior: smooth;
+}
+
+/* הסתרת סקרול בר בדפדפנים מסוימים */
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+/* אפקטי הובר מותאמים למובייל */
+@media (hover: hover) {
+  .hover-effect:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+  }
+}
+
+/* אנימציות מותאמות למובייל */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+/* מותאם למסכים קטנים */
+@media (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+  
+  /* התאמות נוספות למובייל */
+  .MuiCard-root {
+    margin: 8px 0 !important;
+  }
+  
+  .MuiTypography-h5 {
+    font-size: 1.25rem !important;
+  }
+  
+  .MuiTypography-h6 {
+    font-size: 1.1rem !important;
+  }
+}
+
+/* תמיכה ב-Safe Area עבור iPhone */
+@supports (padding: max(0px)) {
+  .safe-area-top {
+    padding-top: max(16px, env(safe-area-inset-top));
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
+
+/* אפקטי זכוכית (Glassmorphism) */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* גרדיאנטים מותאמים */
+.gradient-primary {
+  background: linear-gradient(135deg, #1976d2 0%, #dc004e 100%);
+}
+
+.gradient-secondary {
+  background: linear-gradient(135deg, #42a5f5 0%, #ff5983 100%);
+}
+
+/* אפקטי הצללה מתקדמים */
+.shadow-soft {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+}
+
+.shadow-medium {
+  box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+}
+
+.shadow-strong {
+  box-shadow: 0 20px 60px rgba(0,0,0,0.16);
+}
+
+/* התאמות נוספות למובייל */
+@media (max-width: 768px) {
+  /* הקטנת גופנים במובייל */
+  .MuiTypography-h4 {
+    font-size: 1.5rem !important;
+  }
+  
+  .MuiTypography-h5 {
+    font-size: 1.25rem !important;
+  }
+  
+  .MuiTypography-h6 {
+    font-size: 1.1rem !important;
+  }
+  
+  /* הקטנת ריווחים */
+  .MuiCardContent-root {
+    padding: 12px !important;
+  }
+  
+  /* התאמת כפתורים למגע */
+  .MuiIconButton-root {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
+  .MuiFab-root {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* אופטימיזציה לביצועים */
+.MuiCard-root {
+  will-change: transform;
+}
+
+.MuiButton-root {
+  will-change: transform;
+}
+
+/* מניעת בעיות עם virtual keyboard */
+@media (max-height: 500px) {
+  .MuiDialog-paper {
+    margin: 8px;
+    max-height: calc(100vh - 16px);
+  }
+}
