@@ -1,17 +1,16 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { GoogleMap, Marker, InfoWindow, DirectionsRenderer } from '@react-google-maps/api';
-import { Box, Typography, Card, CardContent, Chip, Divider } from '@mui/material';
+import { Box, Typography, Chip, Divider, alpha } from '@mui/material';
 import type { Destination } from '../types';
 
 const mapContainerStyle = {
   width: '100%',
   height: '400px',
-  borderRadius: '16px'
 };
 
 const defaultCenter = {
   lat: 40.7128,
-  lng: -74.0060 // ניו יורק כברירת מחדל
+  lng: -74.0060 // New York as default
 };
 
 interface GoogleMapComponentProps {
@@ -38,6 +37,12 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
         bounds.extend({ lat: dest.lat, lng: dest.lng });
       });
       mapRef.current.fitBounds(bounds);
+
+      // אם יש רק נקודה אחת, קבע זום הגיוני
+      if (destinations.length === 1) {
+          mapRef.current.setZoom(12);
+      }
+
     }
   }, [destinations]);
 
@@ -48,8 +53,8 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
     }
 
     const directionsService = new window.google.maps.DirectionsService();
-    const origin = destinations[0];
-    const destination = destinations[destinations.length - 1];
+    const origin = { lat: destinations[0].lat, lng: destinations[0].lng };
+    const destination = { lat: destinations[destinations.length - 1].lat, lng: destinations[destinations.length - 1].lng };
     const waypoints = destinations.slice(1, -1).map(dest => ({
       location: { lat: dest.lat, lng: dest.lng },
       stopover: true
@@ -57,8 +62,8 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
 
     directionsService.route(
       {
-        origin: { lat: origin.lat, lng: origin.lng },
-        destination: { lat: destination.lat, lng: destination.lng },
+        origin,
+        destination,
         waypoints,
         travelMode: window.google.maps.TravelMode.DRIVING,
       },
@@ -66,80 +71,91 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
         if (status === window.google.maps.DirectionsStatus.OK && result) {
           setDirections(result);
         } else {
-          console.error(`error fetching directions ${result}`);
+          console.error(`Error fetching directions: ${status}`);
         }
       }
     );
   }, [destinations, showDirections]);
 
-  const getMarkerIcon = (type: Destination['type']) => {
-    const iconMap = {
-      hotel: '🏨',
-      restaurant: '🍽️',
-      attraction: '🎯',
-      transport: '🚌'
+  const getDestinationInfo = (type: Destination['type']) => {
+    const infoMap = {
+      hotel: { icon: '🏨', color: '#2196F3', label: 'מלון' },
+      restaurant: { icon: '🍽️', color: '#FF9800', label: 'מסעדה' },
+      attraction: { icon: '🎯', color: '#4CAF50', label: 'אטרקציה' },
+      transport: { icon: '🚌', color: '#9C27B0', label: 'תחבורה' },
+      other: { icon: '📍', color: '#757575', label: 'אחר' }
     };
-    return iconMap[type] || '📍';
+    return infoMap[type] || infoMap.other;
   };
-
-  const getTypeColor = (type: Destination['type']) => {
-    const colorMap = {
-      hotel: '#2196F3',
-      restaurant: '#FF9800',
-      attraction: '#4CAF50',
-      transport: '#9C27B0'
-    };
-    return colorMap[type] || '#757575';
-  };
-
+  
   return (
     <GoogleMap
       mapContainerStyle={mapContainerStyle}
-      center={destinations.length > 0 ? { lat: destinations[0].lat, lng: destinations[0].lng } : defaultCenter}
-      zoom={12}
+      center={defaultCenter}
+      zoom={8}
       onLoad={onMapLoad}
       options={{
-        styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }],
-        disableDefaultUI: false,
+        styles: [
+            {
+                "featureType": "poi",
+                "elementType": "labels",
+                "stylers": [{ "visibility": "off" }]
+            },
+            {
+                "featureType": "transit",
+                "elementType": "labels.icon",
+                "stylers": [{ "visibility": "off" }]
+            }
+        ],
+        disableDefaultUI: true,
         zoomControl: true,
-        streetViewControl: false,
+        streetViewControl: true,
         mapTypeControl: false,
         fullscreenControl: true,
       }}
     >
-      {destinations.map((destination) => (
-        <Marker
-          key={destination.id}
-          position={{ lat: destination.lat, lng: destination.lng }}
-          onClick={() => setSelectedDestination(destination)}
-          icon={{
-            url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-              <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="20" cy="20" r="18" fill="${getTypeColor(destination.type)}" stroke="white" stroke-width="3"/>
-                <text x="20" y="26" text-anchor="middle" font-size="16" fill="white">${getMarkerIcon(destination.type)}</text>
-              </svg>
-            `)}`,
-            scaledSize: new window.google.maps.Size(40, 40),
-          }}
-        />
-      ))}
+      {!directions && destinations.map((destination) => {
+        const info = getDestinationInfo(destination.type);
+        return (
+          <Marker
+            key={destination.id}
+            position={{ lat: destination.lat, lng: destination.lng }}
+            onClick={() => setSelectedDestination(destination)}
+            icon={{
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 12,
+              fillColor: info.color,
+              fillOpacity: 1,
+              strokeColor: 'white',
+              strokeWeight: 2,
+            }}
+            label={{
+                text: info.icon,
+                fontSize: "16px",
+                color: 'white'
+            }}
+          />
+        );
+      })}
 
       {selectedDestination && (
         <InfoWindow
           position={{ lat: selectedDestination.lat, lng: selectedDestination.lng }}
           onCloseClick={() => setSelectedDestination(null)}
         >
-          {/* --- שינינו את תוכן הבועה --- */}
-          <Box sx={{ minWidth: 220, p: 0.5 }}>
+          <Box sx={{ minWidth: 240, p: 0.5 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
               {selectedDestination.name}
             </Typography>
             <Chip 
               size="small" 
-              label={selectedDestination.type === 'hotel' ? 'מלון' : 
-                    selectedDestination.type === 'restaurant' ? 'מסעדה' :
-                    selectedDestination.type === 'attraction' ? 'אטרקציה' : 'תחבורה'}
-              sx={{ backgroundColor: getTypeColor(selectedDestination.type), color: 'white', mb: 1.5 }}
+              label={getDestinationInfo(selectedDestination.type).label}
+              sx={{ 
+                backgroundColor: getDestinationInfo(selectedDestination.type).color, 
+                color: 'white', 
+                fontWeight: 500,
+                mb: 1.5 
+              }}
             />
             {selectedDestination.address && (
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -150,7 +166,7 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
               <>
                 <Divider sx={{ my: 1 }} />
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  <strong>הערות:</strong> {selectedDestination.notes}
+                  {selectedDestination.notes}
                 </Typography>
               </>
             )}
@@ -163,11 +179,11 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
           directions={directions}
           options={{
             polylineOptions: {
-              strokeColor: '#1976d2',
-              strokeWeight: 5,
+              strokeColor: '#007BFF',
+              strokeWeight: 6,
               strokeOpacity: 0.8,
             },
-            suppressMarkers: true,
+            suppressMarkers: false, // מציג את המרקורים של ההתחלה והסוף
           }}
         />
       )}
