@@ -435,6 +435,28 @@ function App() {
     libraries,
   });
 
+  // --- הוספנו את הלוגיקה לעדכון הריבועים כאן ---
+  useEffect(() => {
+    if (!tripsData) return;
+
+    const userRef = doc(db, 'users', 'mainUser');
+
+    // 1. חישוב מספר היעדים הכולל
+    const totalDestinations = tripsData.reduce((acc, trip) => {
+        return acc + (Array.isArray(trip.destinations) ? trip.destinations.length : 0);
+    }, 0);
+
+    // 2. חישוב מספר הטיולים המאושרים
+    const completedTrips = tripsData.filter(trip => trip.status === 'confirmed').length;
+
+    // 3. עדכון מסד הנתונים
+    updateDoc(userRef, {
+        savedPlaces: totalDestinations,
+        trips: completedTrips
+    }).catch(error => console.error("Error updating user stats: ", error));
+
+  }, [tripsData]); // אפקט זה ירוץ בכל פעם שנתוני הטיולים משתנים
+
   useEffect(() => {
     const unsubscribeTrips = onSnapshot(collection(db, 'trips'), (snapshot) => {
       const fetchedTrips = snapshot.docs.map(
@@ -641,12 +663,10 @@ function App() {
       case 'home':
         return <HomePage trips={tripsData} user={userData} onEditTrip={handleEditTrip} onAddTrip={handleOpenAddTrip} onUploadTrip={handleTriggerUpload} onViewOnMap={handleViewTripOnMap} onDeleteTrip={handleDeleteTrip} />;
       case 'checklist':
-        // בחרנו להציג את הרשימה של הטיול הראשון שנוצר
         return tripsData.length > 0 ? <Checklist tripId={tripsData[0].id} /> : <Typography sx={{p: 3}}>צור טיול כדי לראות את רשימת המשימות.</Typography>;
       case 'ideas': 
         return <IdeasPage />;
       case 'budget':
-        // הוספנו את userData לרכיב התקציב
         return tripsData.length > 0 && userData ? <BudgetTracker trip={tripsData[0]} user={userData} /> : <Typography sx={{p: 3}}>צור טיול כדי לנהל תקציב.</Typography>;
       case 'profile':
         return <UserProfile user={userData} />;
