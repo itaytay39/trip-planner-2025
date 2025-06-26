@@ -137,3 +137,4 @@ const Checklist: React.FC<ChecklistProps> = ({ tripId }) => {
 };
 
 export default Checklist;
+
