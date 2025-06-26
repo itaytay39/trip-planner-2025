@@ -23,6 +23,7 @@ import {
 import {
   LocationOn,
   Flight,
+  Share,
   Add,
   Notifications,
   AttachMoney,
@@ -640,11 +641,13 @@ function App() {
       case 'home':
         return <HomePage trips={tripsData} user={userData} onEditTrip={handleEditTrip} onAddTrip={handleOpenAddTrip} onUploadTrip={handleTriggerUpload} onViewOnMap={handleViewTripOnMap} onDeleteTrip={handleDeleteTrip} />;
       case 'checklist':
+        // בחרנו להציג את הרשימה של הטיול הראשון שנוצר
         return tripsData.length > 0 ? <Checklist tripId={tripsData[0].id} /> : <Typography sx={{p: 3}}>צור טיול כדי לראות את רשימת המשימות.</Typography>;
       case 'ideas': 
         return <IdeasPage />;
       case 'budget':
-        return tripsData.length > 0 ? <BudgetTracker trip={tripsData[0]} /> : <Typography sx={{p: 3}}>צור טיול כדי לנהל תקציב.</Typography>;
+        // הוספנו את userData לרכיב התקציב
+        return tripsData.length > 0 && userData ? <BudgetTracker trip={tripsData[0]} user={userData} /> : <Typography sx={{p: 3}}>צור טיול כדי לנהל תקציב.</Typography>;
       case 'profile':
         return <UserProfile user={userData} />;
       case 'map':
