@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -52,11 +52,10 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
       setDestinations(trip.destinations || []);
     } else {
       setCurrentTrip(null);
-      // אם "הכל" נבחר, הצג את כל היעדים מכל הטיולים
       const allDestinations = trips.flatMap(t => t.destinations || []);
       setDestinations(allDestinations);
     }
-    setSuggestedIdeas([]); // איפוס הצעות במעבר בין טיולים
+    setSuggestedIdeas([]);
   }, [selectedTripId, trips]);
 
   const handleTripChange = (event: SelectChangeEvent) => {
@@ -109,7 +108,17 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
   };
 
   const handleAddDestination = async (newDestination: Destination) => {
-    if (!currentTrip || !currentTrip.id) return;
+    if (!currentTrip || !currentTrip.id) {
+        // אם המשתמש נמצא בתצוגת "הכל", נוסיף את היעד לטיול הראשון ברשימה
+        if (trips.length > 0) {
+            const firstTripRef = doc(db, 'trips', trips[0].id);
+            await updateDoc(firstTripRef, { destinations: arrayUnion(newDestination) });
+            toast.success(`יעד חדש נוסף לטיול "${trips[0].title}"!`);
+        } else {
+            toast.error("צור טיול תחילה כדי להוסיף לו יעדים.");
+        }
+        return;
+    }
     
     const tripRef = doc(db, 'trips', currentTrip.id);
     try {
@@ -139,7 +148,17 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
     const iconMap = { hotel: '🏨', restaurant: '🍽️', attraction: '🎯', transport: '🚌' };
     return iconMap[type] || '📍';
   };
+
+  const getTypeLabel = (type: Destination['type']) => {
+    const labelMap = { hotel: 'מלון', restaurant: 'מסעדה', attraction: 'אטרקציה', transport: 'תחבורה' };
+    return labelMap[type] || 'אחר';
+  };
   
+  const getTypeColor = (type: Destination['type']) => {
+    const colorMap = { hotel: 'primary', restaurant: 'warning', attraction: 'success', transport: 'secondary' };
+    return colorMap[type] as 'primary' | 'warning' | 'success' | 'secondary' | 'default' || 'default';
+  };
+
   return (
     <Box sx={{ padding: '20px', paddingBottom: '100px' }}>
       <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
@@ -147,4 +166,103 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
       </Typography>
 
       <FormControl fullWidth sx={{ mb: 3 }}>
-        <InputLabel>בחר טיול
+        <InputLabel>בחר טיול להצגה</InputLabel>
+        <Select value={selectedTripId} label="בחר טיול להצגה" onChange={handleTripChange}>
+          <MenuItem value="all">הצג הכל</MenuItem>
+          {trips.map((trip) => (
+            <MenuItem key={trip.id} value={trip.id}>
+              {trip.title}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <Card sx={{ borderRadius: '20px', mb: 3, overflow: 'hidden' }}>
+        <GoogleMapComponent destinations={destinations} showDirections={selectedTripId !== 'all'} />
+      </Card>
+
+      <Card sx={{ borderRadius: '20px', mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>הוסף יעד חדש למסלול</Typography>
+          <PlaceSearch onPlaceSelect={handleAddDestination} placeholder="חפש והוסף מקום..."/>
+        </CardContent>
+      </Card>
+      
+      {/* רק אם נבחר טיול ספציפי, נראה את האפשרויות שלו */}
+      {currentTrip && (
+        <>
+          <Card sx={{ borderRadius: '20px', mb: 3 }}>
+            <CardContent sx={{textAlign: 'center'}}>
+              <Button 
+                    variant="contained" 
+                    startIcon={isFindingSuggestions ? <CircularProgress size={20} color="inherit" /> : <IdeasIcon />}
+                    onClick={findSuggestedIdeas}
+                    disabled={isFindingSuggestions}
+                >
+                מצא לי רעיונות חדשים
+              </Button>
+            </CardContent>
+          </Card>
+          
+          {isFindingSuggestions && (
+              <Box sx={{display: 'flex', justifyContent: 'center', my: 2}}>
+                  <CircularProgress />
+              </Box>
+          )}
+
+          {suggestedIdeas.length > 0 && (
+            <Card sx={{ borderRadius: '20px', mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>הצעות למסלול</Typography>
+                <List>
+                  {suggestedIdeas.map((idea) => (
+                    <ListItem key={idea.id} divider>
+                      <ListItemIcon sx={{ fontSize: '24px' }}>
+                        {getDestinationIcon(idea.type)}
+                      </ListItemIcon>
+                      <ListItemText primary={idea.name} secondary={idea.notes} />
+                      <ListItemSecondaryAction>
+                        <IconButton color="primary" onClick={() => handleAddDestination(idea)}>
+                          <Add />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                </List>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card sx={{ borderRadius: '20px' }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>יעדים במסלול: {currentTrip.title}</Typography>
+              <List>
+                {destinations.map((destination, index) => (
+                  <ListItem key={destination.id} sx={{ borderRadius: '12px', mb: 1, backgroundColor: 'grey.50', border: '1px solid', borderColor: 'divider' }}>
+                    <ListItemIcon>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, minWidth: '20px' }}>{index + 1}</Typography>
+                        <Typography sx={{ fontSize: '20px' }}>{getDestinationIcon(destination.type)}</Typography>
+                      </Box>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{destination.name}</Typography><Chip label={getTypeLabel(destination.type)} size="small" color={getTypeColor(destination.type)}/></Box>}
+                      secondary={destination.notes}
+                    />
+                    <ListItemSecondaryAction>
+                        <IconButton size="small" color="error" onClick={() => handleDeleteDestination(destination)}>
+                          <Delete />
+                        </IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                ))}
+              </List>
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </Box>
+  );
+};
+
+export default MapPage;
