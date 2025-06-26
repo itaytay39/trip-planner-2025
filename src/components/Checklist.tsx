@@ -1,7 +1,5 @@
-// src/components/Checklist.tsx
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { Box, Card, CardContent, Typography, List, ListItem, Checkbox, TextField, Button, IconButton, LinearProgress, ListItemText } from '@mui/material';
+import { Box, Card, CardContent, Typography, List, ListItem, Checkbox, TextField, Button, IconButton, LinearProgress, ListItemText, alpha, useTheme } from '@mui/material';
 import { Add, Delete } from '@mui/icons-material';
 import type { ChecklistItem } from '../types';
 import { db } from '../firebase';
@@ -16,6 +14,7 @@ const Checklist: React.FC<ChecklistProps> = ({ tripId }) => {
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [newItemText, setNewItemText] = useState('');
   const [loading, setLoading] = useState(true);
+  const theme = useTheme();
 
   useEffect(() => {
     if (!tripId) return;
@@ -65,7 +64,6 @@ const Checklist: React.FC<ChecklistProps> = ({ tripId }) => {
   };
 
   const handleDeleteItem = async (id: string) => {
-    if (!window.confirm("האם למחוק את המשימה?")) return;
     const itemRef = doc(db, 'trips', tripId, 'checklist', id);
     try {
       await deleteDoc(itemRef);
@@ -89,41 +87,48 @@ const Checklist: React.FC<ChecklistProps> = ({ tripId }) => {
       <Card sx={{ borderRadius: '24px' }}>
         <CardContent>
           <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
-            רשימת משימות
+            רשימת ציוד ומשימות
           </Typography>
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, fontWeight: 500 }}>
               {Math.round(completedPercentage)}% הושלמו
             </Typography>
-            <LinearProgress variant="determinate" value={completedPercentage} sx={{ height: 8, borderRadius: 4 }} />
+            <LinearProgress variant="determinate" value={completedPercentage} sx={{ height: 10, borderRadius: 5 }} />
           </Box>
-          <List>
+          <List sx={{ p: 0 }}>
             {items.map(item => (
-              // --- התיקון כאן ---
-              <ListItem 
+              <Card 
                 key={item.id} 
-                secondaryAction={
-                  <IconButton edge="end" onClick={() => handleDeleteItem(item.id)}>
-                    <Delete color="error" />
-                  </IconButton>
-                } 
-                disablePadding 
+                variant="outlined"
                 sx={{ 
-                  mb: 1, 
-                  pl: 1, // הוספנו ריווח פנימי כדי להרחיק את תיבת הסימון מהקצה
-                  '& .MuiListItemSecondaryAction-root': { // הוספנו ריווח לכפתור המחיקה
-                    right: 0,
-                  }
+                  mb: 1.5, 
+                  borderRadius: '16px',
+                  backgroundColor: item.completed ? alpha(theme.palette.success.main, 0.05) : 'transparent',
+                  borderColor: item.completed ? alpha(theme.palette.success.main, 0.2) : theme.palette.divider,
                 }}
               >
-                <Checkbox edge="start" checked={item.completed} onClick={() => handleToggle(item)} />
-                <ListItemText primary={item.text} sx={{ textDecoration: item.completed ? 'line-through' : 'none', color: item.completed ? 'text.secondary' : 'text.primary' }} />
-              </ListItem>
+                <ListItem sx={{ p: 1 }}>
+                  <Checkbox edge="start" checked={item.completed} onClick={() => handleToggle(item)} sx={{pr: 1.5}} />
+                  <ListItemText 
+                    primary={item.text} 
+                    sx={{ 
+                      textDecoration: item.completed ? 'line-through' : 'none', 
+                      color: item.completed ? 'text.secondary' : 'text.primary',
+                      fontWeight: 500
+                    }} 
+                  />
+                  <IconButton edge="end" onClick={() => handleDeleteItem(item.id)} sx={{ml: 1}}>
+                    <Delete color="error" fontSize="small" />
+                  </IconButton>
+                </ListItem>
+              </Card>
             ))}
           </List>
-          <Box sx={{ display: 'flex', gap: 1, mt: 3 }}>
-            <TextField fullWidth variant="outlined" size="small" placeholder="הוסף משימה חדשה..." value={newItemText} onChange={e => setNewItemText(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAddItem()} />
-            <Button variant="contained" onClick={handleAddItem}><Add /></Button>
+          <Box sx={{ display: 'flex', gap: 1.5, mt: 3 }}>
+            <TextField fullWidth variant="outlined" size="small" placeholder="הוסף משימה חדשה..." value={newItemText} onChange={e => setNewItemText(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAddItem()} sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }} />
+            <Button variant="contained" onClick={handleAddItem} sx={{ borderRadius: '12px', px: 3 }}>
+              <Add />
+            </Button>
           </Box>
         </CardContent>
       </Card>
