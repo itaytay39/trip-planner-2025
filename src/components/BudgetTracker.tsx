@@ -209,3 +209,4 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ trip }) => {
 
 export default BudgetTracker;
 
+ 
