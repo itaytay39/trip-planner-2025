@@ -23,7 +23,6 @@ import {
 import {
   LocationOn,
   Flight,
-  Share,
   Add,
   Notifications,
   AttachMoney,
@@ -48,7 +47,7 @@ import { collection, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, delete
 import type { Trip, User } from './types';
 import toast from 'react-hot-toast';
 
-const libraries: ("places")[] = ["places"];
+const libraries: ("places" | "directions")[] = ["places", "directions"];
 
 const defaultChecklistItems = [
   { text: "דרכון בתוקף", completed: false },
@@ -593,7 +592,7 @@ function App() {
     try {
         const prompt = `A beautiful, vibrant, picturesque travel photograph of ${editingTrip.title}. Cinematic, detailed, high quality.`;
         const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1} };
-        const apiKey = "";
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
 
         const response = await fetch(apiUrl, {
@@ -634,7 +633,7 @@ function App() {
     }
 
     if (loadError) {
-      return <Box>Error loading maps</Box>;
+      return <Box>Error loading maps: {loadError.message}</Box>;
     }
     
     switch (activeTab) {
