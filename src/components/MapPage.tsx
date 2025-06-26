@@ -77,8 +77,8 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
     `;
 
     try {
-      const apiKey = "YOUR_GEMINI_API_KEY_HERE"; // <-- הדבק כאן את מפתח ה-API שלך
-      if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY_HERE") {
+      const apiKey = "AIzaSyCKxYbcWtt38KZQEhnYZ30elWMX-zmozuk"; // <-- הדבק כאן את מפתח ה-API שלך
+      if (!apiKey || apiKey === "AIzaSyCKxYbcWtt38KZQEhnYZ30elWMX-zmozuk") {
         throw new Error("אנא הגדר מפתח API של Gemini");
       }
 
