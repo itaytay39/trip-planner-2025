@@ -192,3 +192,4 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
 };
 
 export default GoogleMapComponent;
+
