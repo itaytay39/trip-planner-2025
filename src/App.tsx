@@ -36,7 +36,6 @@ import { useJsApiLoader } from '@react-google-maps/api';
 
 // Import Components
 import BudgetTracker from './components/BudgetTracker';
-import RouteManager from './components/RouteManager';
 import UserProfile from './components/UserProfile';
 import MapPage from './components/MapPage';
 import Checklist from './components/Checklist';
@@ -51,10 +50,7 @@ import toast from 'react-hot-toast';
 
 const libraries: ("places")[] = ["places"];
 
-
-// --- 1. הוספנו את רשימת הציוד המוכנה ---
 const defaultChecklistItems = [
-  // מסמכים וכסף
   { text: "דרכון בתוקף", completed: false },
   { text: "ויזה לארה\"ב (ESTA)", completed: false },
   { text: "רישיון נהיגה ישראלי ובינלאומי", completed: false },
@@ -63,7 +59,6 @@ const defaultChecklistItems = [
   { text: "ביטוח נסיעות לחו\"ל", completed: false },
   { text: "כרטיסי אשראי בינלאומיים", completed: false },
   { text: "דולרים במזומן", completed: false },
-  // ביגוד
   { text: "חולצות קצרות וארוכות", completed: false },
   { text: "מכנסיים ארוכים וקצרים", completed: false },
   { text: "בגדים תחתונים וגרביים", completed: false },
@@ -72,11 +67,9 @@ const defaultChecklistItems = [
   { text: "בגד ים", completed: false },
   { text: "פיג'מה", completed: false },
   { text: "נעלי הליכה נוחות", completed: false },
-  // אלקטרוניקה
   { text: "מטען נייד (Power Bank)", completed: false },
   { text: "מתאם לחשמל אמריקאי", completed: false },
   { text: "אוזניות", completed: false },
-  // תרופות וטיפוח
   { text: "תרופות מרשם אישיות", completed: false },
   { text: "משככי כאבים", completed: false },
   { text: "פלסטרים וחומר חיטוי", completed: false },
@@ -84,11 +77,6 @@ const defaultChecklistItems = [
   { text: "קרם הגנה", completed: false },
   { text: "מברשת ומשחת שיניים", completed: false },
 ];
-
-
-// =================================================================
-// רכיבי עזר
-// =================================================================
 
 const Header = ({ user }: { user: User }) => {
   const theme = useTheme();
@@ -487,7 +475,6 @@ function App() {
     return images[randomIndex];
   };
 
-  // --- 2. שינינו את הפונקציה הזו ---
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -500,10 +487,8 @@ function App() {
         const tripData = JSON.parse(text);
         const newTripData = { ...tripData, image: getRandomAmericanImage(), createdAt: serverTimestamp() };
         
-        // יצירת הטיול החדש
         const newTripRef = await addDoc(collection(db, "trips"), newTripData);
         
-        // יצירת רשימת המשימות המוכנה
         const batch = writeBatch(db);
         const checklistRef = collection(db, 'trips', newTripRef.id, 'checklist');
         defaultChecklistItems.forEach(item => {
@@ -542,7 +527,6 @@ function App() {
     }
   };
 
-  // --- 3. שינינו גם את הפונקציה הזו ---
   const handleOpenAddTrip = () => {
     setIsNewTrip(true);
     setEditingTrip({
@@ -550,7 +534,7 @@ function App() {
       title: '',
       dates: '',
       budget: '',
-      image: getRandomAmericanImage(), // תמונה אקראית כברירת מחדל
+      image: getRandomAmericanImage(),
       status: 'planning',
       destinations: [],
     } as Trip);
@@ -561,7 +545,6 @@ function App() {
     setEditingTrip(trip);
   };
 
-  // --- 4. ושינינו גם את פונקציית השמירה ---
   const handleSaveTrip = async () => {
     if (!editingTrip) return;
 
@@ -573,7 +556,6 @@ function App() {
           createdAt: serverTimestamp(),
         });
 
-        // יצירת רשימת המשימות המוכנה גם כאן
         const batch = writeBatch(db);
         const checklistRef = collection(db, 'trips', newTripRef.id, 'checklist');
         defaultChecklistItems.forEach(item => {
@@ -659,7 +641,6 @@ function App() {
       case 'home':
         return <HomePage trips={tripsData} user={userData} onEditTrip={handleEditTrip} onAddTrip={handleOpenAddTrip} onUploadTrip={handleTriggerUpload} onViewOnMap={handleViewTripOnMap} onDeleteTrip={handleDeleteTrip} />;
       case 'checklist':
-        // בחרנו להציג את הרשימה של הטיול הראשון שנוצר
         return tripsData.length > 0 ? <Checklist tripId={tripsData[0].id} /> : <Typography sx={{p: 3}}>צור טיול כדי לראות את רשימת המשימות.</Typography>;
       case 'ideas': 
         return <IdeasPage />;
