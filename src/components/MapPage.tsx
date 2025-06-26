@@ -258,3 +258,4 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
 };
 
 export default MapPage;
+
