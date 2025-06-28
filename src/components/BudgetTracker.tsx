@@ -18,7 +18,8 @@ import {
   ListItemIcon,
   ListItemText,
   ListItemSecondaryAction,
-  Fab
+  Fab,
+  InputAdornment
 } from '@mui/material';
 import { 
   Add, 
@@ -45,6 +46,11 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ trip }) => {
   const [items, setItems] = useState<BudgetItem[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<BudgetItem | null>(null);
+  
+  // State for editing the total budget
+  const [isEditBudgetOpen, setIsEditBudgetOpen] = useState(false);
+  const [newBudget, setNewBudget] = useState('');
+
   const [formData, setFormData] = useState({
     category: 'transport' as BudgetItem['category'],
     title: '',
@@ -63,12 +69,14 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ trip }) => {
       setItems(fetchedItems);
     });
 
+    // Update the newBudget state when the trip prop changes
+    setNewBudget(trip.budget ? trip.budget.replace(/[^0-9]/g, '') : '0');
+
     return () => unsubscribe();
   }, [trip]);
 
-  // [התיקון החשוב] מוודאים שהתקציב קיים לפני שמנסים להשתמש בו
   const totalBudget = useMemo(() => {
-    const budgetString = trip.budget || ''; // אם אין תקציב, השתמש במחרוזת ריקה
+    const budgetString = trip.budget || '';
     return parseInt(budgetString.replace(/[^0-9]/g, ''), 10) || 0;
   }, [trip.budget]);
 
@@ -132,19 +140,44 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ trip }) => {
     }
   };
 
+  const handleSaveBudget = async () => {
+      if (!trip || !trip.id || !newBudget) return;
+      
+      const tripRef = doc(db, 'trips', trip.id);
+      const budgetValue = `₪${parseInt(newBudget, 10).toLocaleString()}`; // Format the budget string
+
+      try {
+          await updateDoc(tripRef, { budget: budgetValue });
+          toast.success('התקציב עודכן בהצלחה!');
+          setIsEditBudgetOpen(false);
+      } catch (error) {
+          toast.error('שגיאה בעדכון התקציב.');
+      }
+  }
+
   const getCategoryTotal = (category: BudgetItem['category']) => items.filter(item => item.category === category).reduce((sum, item) => sum + item.amount, 0);
 
   return (
     <Box sx={{ padding: '20px', paddingBottom: '100px' }}>
       <Card sx={{ borderRadius: '24px', mb: 3, background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)' }}>
         <CardContent sx={{ color: 'white', textAlign: 'center', padding: '24px' }}>
-            <Typography variant="h4" sx={{ fontWeight: 800, mb: 1 }}>₪{totalSpent.toLocaleString()}</Typography>
-            <Typography variant="body1" sx={{ opacity: 0.9, mb: 2 }}>מתוך תקציב של ₪{totalBudget.toLocaleString()}</Typography>
+            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1}}>
+                <Typography variant="h4" sx={{ fontWeight: 800, mb: 1 }}>₪{totalSpent.toLocaleString()}</Typography>
+            </Box>
+            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1}}>
+                <Typography variant="body1" sx={{ opacity: 0.9, mb: 2 }}>
+                    מתוך תקציב של ₪{totalBudget.toLocaleString()}
+                </Typography>
+                <IconButton size="small" onClick={() => setIsEditBudgetOpen(true)} sx={{color: 'white', mb: 2}}>
+                    <Edit fontSize='small' />
+                </IconButton>
+            </Box>
             <LinearProgress variant="determinate" value={Math.min(spentPercentage, 100)} sx={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.3)', '& .MuiLinearProgress-bar': { backgroundColor: spentPercentage > 100 ? '#f44336' : '#4caf50' }}}/>
             <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>נותרו ₪{remainingBudget.toLocaleString()}</Typography>
         </CardContent>
       </Card>
 
+      {/* Categories and Items lists remain the same... */}
       <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>פילוח לפי קטגוריות</Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 2, mb: 3 }}>
         {Object.entries(categoryLabels).map(([category, label]) => {
@@ -183,9 +216,36 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ trip }) => {
           );
         })}
       </List>
+      
 
       <Fab color="primary" onClick={() => handleOpenDialog()} sx={{ position: 'fixed', bottom: 100, right: 20, background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)' }}><Add /></Fab>
 
+      {/* Edit Total Budget Dialog */}
+      <Dialog open={isEditBudgetOpen} onClose={() => setIsEditBudgetOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>עריכת תקציב כולל</DialogTitle>
+        <DialogContent>
+            <TextField
+                autoFocus
+                margin="dense"
+                label="סכום התקציב החדש"
+                type="number"
+                fullWidth
+                variant="outlined"
+                value={newBudget}
+                onChange={(e) => setNewBudget(e.target.value)}
+                InputProps={{
+                    startAdornment: <InputAdornment position="start">₪</InputAdornment>,
+                }}
+                sx={{mt: 1}}
+            />
+        </DialogContent>
+        <DialogActions>
+            <Button onClick={() => setIsEditBudgetOpen(false)}>ביטול</Button>
+            <Button onClick={handleSaveBudget} variant="contained">שמור תקציב</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add/Edit Expense Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{editingItem ? 'עריכת הוצאה' : 'הוספת הוצאה חדשה'}</DialogTitle>
         <DialogContent>
@@ -208,5 +268,3 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ trip }) => {
 };
 
 export default BudgetTracker;
-
- 
