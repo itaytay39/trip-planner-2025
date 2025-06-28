@@ -1,5 +1,5 @@
  import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Box, Card, CardContent, Typography, List, ListItem, Checkbox, TextField, Button, IconButton, LinearProgress, ListItemText, alpha, useTheme, CircularProgress, Collapse, ListSubheader } from '@mui/material';
+import { Box, Card, CardContent, Typography, List, ListItem, Checkbox, TextField, Button, IconButton, LinearProgress, ListItemText, alpha, useTheme, CircularProgress, Collapse, ListSubheader, ListItemButton, ListItemIcon } from '@mui/material';
 import { Add, Delete, ExpandLess, ExpandMore } from '@mui/icons-material';
 import type { ChecklistItem } from '../types';
 import { db } from '../firebase';
