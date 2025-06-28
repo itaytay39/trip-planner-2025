@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Typography, Card, CardContent, List, ListItem, ListItemIcon, ListItemText, ListItemSecondaryAction, IconButton, Chip, Button, CircularProgress, FormControl, InputLabel, Select, MenuItem, useTheme, alpha, Fab } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
-import { Delete, Add, AutoAwesome as IdeasIcon, Navigation as NavigationIcon, Stop as StopIcon } from '@mui/icons-material';
+import { Delete, Add, AutoAwesome as IdeasIcon, Route as RouteIcon, WrongLocation as HideRouteIcon } from '@mui/icons-material';
 import GoogleMapComponent from './GoogleMap';
 import PlaceSearch from './PlaceSearch';
 import type { Destination, Trip } from '../types';
@@ -19,10 +19,9 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
   const [currentTrip, setCurrentTrip] = useState<Trip | null>(null);
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [userPosition, setUserPosition] = useState<{ lat: number; lng: number } | null>(null);
-  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [showRoute, setShowRoute] = useState(false); // Controls route visibility
   const [suggestedIdeas, setSuggestedIdeas] = useState<Destination[]>([]);
   const [isFindingSuggestions, setIsFindingSuggestions] = useState(false);
-  const watchIdRef = useRef<number | null>(null);
   const theme = useTheme();
 
   useEffect(() => {
@@ -36,40 +35,11 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
       setDestinations(allDestinations);
     }
     setSuggestedIdeas([]);
+    setShowRoute(false); // Reset route view when trip changes
   }, [selectedTripId, trips]);
 
   const handleTripChange = (event: SelectChangeEvent) => {
     setSelectedTripId(event.target.value as string);
-    if (isLiveMode) toggleLiveMode(); // Turn off live mode when changing trip
-  };
-
-  const toggleLiveMode = () => {
-    if (isLiveMode) {
-      if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-      setIsLiveMode(false);
-      setUserPosition(null);
-      toast('מצב ניווט חי הופסק.');
-    } else {
-      if (!navigator.geolocation) {
-        toast.error('שירותי מיקום אינם נתמכים בדפדפן זה.');
-        return;
-      }
-      const toastId = toast.loading('מנסה לאתר את המיקום שלך...');
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        (position) => {
-          toast.dismiss(toastId);
-          if (!isLiveMode) toast.success('המיקום שלך נמצא!');
-          setUserPosition({ lat: position.coords.latitude, lng: position.coords.longitude });
-          setIsLiveMode(true);
-        },
-        () => {
-          toast.dismiss(toastId);
-          toast.error('לא ניתן היה לקבל את המיקום. ודא שאישרת הרשאות.');
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    }
   };
   
   const findSuggestedIdeas = async () => {
@@ -78,15 +48,15 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
     setSuggestedIdeas([]);
     const toastId = toast.loading('חושב על רעיונות חדשים בשבילך...');
     const existingDestinationNames = destinations.map(d => d.name).join(', ');
-    const prompt = `Based on a trip titled "${currentTrip.title}" in the USA, which already includes these destinations: ${existingDestinationNames}, suggest 5 new and relevant points of interest (attractions, restaurants, or hotels) nearby. Provide the response as a valid JSON array of objects. Each object must have "id", "name", "lat", "lng", "address", "type" ('attraction', 'restaurant', or 'hotel'), and "notes" (in Hebrew).`;
+    const prompt = `Based on a trip titled "${currentTrip.title}", which already includes these destinations: ${existingDestinationNames}, suggest 5 new and relevant points of interest. Provide the response as a valid JSON array of objects. Each object must have "id", "name", "lat", "lng", "type", and "notes" in Hebrew.`;
 
     try {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) throw new Error("מפתח ה-API של Gemini אינו מוגדר.");
+      if (!apiKey) throw new Error("מפתח API של Gemini אינו מוגדר.");
       const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       const requestBody = { contents: [{ parts: [{ text: prompt }] }] };
       const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
-      if (!response.ok) throw new Error(`שגיאה בתקשורת עם שירות ה-AI. קוד: ${response.status}`);
+      if (!response.ok) throw new Error(`שגיאה ב-AI. קוד: ${response.status}`);
       const data = await response.json();
       if (!data.candidates?.[0]?.content?.parts?.[0]?.text) throw new Error("תגובה לא תקינה מה-AI.");
       const rawText = data.candidates[0].content.parts[0].text;
@@ -96,28 +66,22 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
       toast.success(`מצאתי ${ideas.length} רעיונות חדשים!`, { id: toastId });
     } catch (error) {
       console.error("Error fetching suggestions:", error);
-      toast.error((error as Error).message || "לא הצלחתי למצוא הצעות כרגע.", { id: toastId });
+      toast.error((error as Error).message || "לא הצלחתי למצוא הצעות.", { id: toastId });
     } finally {
       setIsFindingSuggestions(false);
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
-    }
-  }, []);
-  
   const handleAddDestination = async (newDestination: Destination) => {
     const tripToUpdate = currentTrip || (selectedTripId === 'all' && trips.length > 0 ? trips[0] : null);
     if (!tripToUpdate) {
-        toast.error("צור טיול תחילה או בחר טיול ספציפי כדי להוסיף לו יעדים.");
+        toast.error("בחר טיול כדי להוסיף לו יעדים.");
         return;
     }
     const tripRef = doc(db, 'trips', tripToUpdate.id);
     await updateDoc(tripRef, { destinations: arrayUnion(newDestination) });
     setSuggestedIdeas(prevIdeas => prevIdeas.filter(idea => idea.id !== newDestination.id));
-    toast.success(`"${newDestination.name}" נוסף לטיול "${tripToUpdate.title}"!`);
+    toast.success(`"${newDestination.name}" נוסף לטיול!`);
   };
 
   const handleDeleteDestination = async (destinationToDelete: Destination) => {
@@ -137,8 +101,8 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
   };
 
   return (
-    <Box sx={{ padding: '20px', paddingBottom: '100px' }}>
-      <Typography variant="h5" sx={{ fontWeight: 800, mb: 3 }}>מפת הטיולים שלי</Typography>
+    <Box sx={{ p: {xs: 2, sm: 3}, paddingBottom: '120px' }}>
+      <Typography variant="h4" sx={{ fontWeight: 800, mb: 3 }}>מפת הטיולים</Typography>
       <FormControl fullWidth sx={{ mb: 3 }}>
         <InputLabel>בחר טיול להצגה</InputLabel>
         <Select value={selectedTripId} label="בחר טיול להצגה" onChange={handleTripChange}>
@@ -147,85 +111,82 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
         </Select>
       </FormControl>
 
-      <Card sx={{ borderRadius: '24px', mb: 3, overflow: 'hidden', position: 'relative' }}>
-        <GoogleMapComponent destinations={destinations} userPosition={userPosition} isLiveMode={isLiveMode} />
-        {currentTrip && (
-            <Fab 
-                color={isLiveMode ? "secondary" : "primary"}
-                variant="extended"
-                onClick={toggleLiveMode}
-                sx={{ position: 'absolute', bottom: 16, right: 16, zIndex: 10 }}
-            >
-                {isLiveMode ? <StopIcon sx={{ mr: 1 }} /> : <NavigationIcon sx={{ mr: 1 }} />}
-                {isLiveMode ? 'הפסק ניווט' : 'התחל ניווט חי'}
-            </Fab>
-        )}
+      <Card sx={{ borderRadius: 5, mb: 3, overflow: 'hidden', position: 'relative' }}>
+        <GoogleMapComponent destinations={destinations} userPosition={userPosition} showRoute={showRoute} />
       </Card>
       
-      {currentTrip && (
-        <>
-          <Card sx={{ borderRadius: '24px', mb: 3, textAlign: 'center' }}>
-            <CardContent>
-              <Button 
-                variant="contained" 
+      <Box sx={{display: 'grid', gridTemplateColumns: {xs: '1fr', sm: '1fr 1fr'}, gap: 2, mb: 3}}>
+        {currentTrip && (
+            <Button
+                variant="contained"
+                startIcon={showRoute ? <HideRouteIcon /> : <RouteIcon />}
+                onClick={() => setShowRoute(!showRoute)}
+                color={showRoute ? "secondary" : "primary"}
+                sx={{py: 1.5, borderRadius: 3}}
+            >
+                {showRoute ? 'הסתר מסלול' : 'הצג מסלול על המפה'}
+            </Button>
+        )}
+        {currentTrip && (
+            <Button 
+                variant="outlined" 
                 startIcon={isFindingSuggestions ? <CircularProgress size={20} color="inherit" /> : <IdeasIcon />}
                 onClick={findSuggestedIdeas}
                 disabled={isFindingSuggestions || !currentTrip}
-              >
-                מצא לי רעיונות חדשים
-              </Button>
-            </CardContent>
-          </Card>
-          
-          {suggestedIdeas.length > 0 && (
-            <Card sx={{ borderRadius: '24px', mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>הצעות למסלול</Typography>
-                <List>
-                  {suggestedIdeas.map((idea) => {
-                    const info = getDestinationInfo(idea.type);
-                    return (
-                    <ListItem key={idea.id} divider>
-                      <ListItemText primary={idea.name} secondary={idea.notes} />
-                      <ListItemSecondaryAction>
-                        <IconButton color="primary" onClick={() => handleAddDestination(idea)} title={`הוסף ${idea.name} למסלול`}>
-                          <Add />
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                  )})}
-                </List>
-              </CardContent>
-            </Card>
-          )}
+                sx={{py: 1.5, borderRadius: 3}}
+            >
+                מצא לי רעיונות
+            </Button>
+        )}
+      </Box>
 
-          <Card sx={{ borderRadius: '24px', mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>יעדים במסלול: {currentTrip.title}</Typography>
-              <List sx={{p: 0}}>
-                {destinations.map((destination, index) => {
-                  const info = getDestinationInfo(destination.type);
-                  return (
-                  <ListItem key={destination.id} sx={{ borderRadius: '16px', mb: 1, p: 1.5, backgroundColor: alpha(theme.palette.grey[500], 0.05)}}>
-                    <ListItemIcon sx={{minWidth: 'auto', mr: 2}}>
-                      <Typography variant="body1" sx={{ fontWeight: 700 }}>{index + 1}</Typography>
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{destination.name}</Typography><Chip label={info.label} size="small" color={info.color}/></Box>}
-                      secondary={destination.notes}
-                    />
-                    <ListItemSecondaryAction>
-                        <IconButton size="small" color="error" onClick={() => handleDeleteDestination(destination)}><Delete /></IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                  )})}
-              </List>
-            </CardContent>
-          </Card>
-        </>
+      {suggestedIdeas.length > 0 && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>הצעות למסלול</Typography>
+            <List>
+              {suggestedIdeas.map((idea) => (
+                <ListItem key={idea.id} divider>
+                  <ListItemText primary={idea.name} secondary={idea.notes} />
+                  <ListItemSecondaryAction>
+                    <IconButton color="primary" onClick={() => handleAddDestination(idea)} title={`הוסף ${idea.name} למסלול`}>
+                      <Add />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
+          </CardContent>
+        </Card>
       )}
 
-       <Card sx={{ borderRadius: '24px', mb: 3 }}>
+      {currentTrip && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>יעדים במסלול: {currentTrip.title}</Typography>
+            <List sx={{p: 0}}>
+              {destinations.map((destination, index) => {
+                const info = getDestinationInfo(destination.type);
+                return (
+                <ListItem key={destination.id} sx={{ borderRadius: 3, mb: 1, p: 1.5, backgroundColor: alpha(theme.palette.grey[500], 0.05)}}>
+                  <ListItemIcon sx={{minWidth: 'auto', mr: 2}}>
+                    <Typography variant="body1" sx={{ fontWeight: 700, color: 'primary.main' }}>{index + 1}</Typography>
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{destination.name}</Typography><Chip label={info.label} size="small" color={info.color}/></Box>}
+                    secondary={destination.notes}
+                  />
+                  <ListItemSecondaryAction>
+                      <IconButton size="small" color="error" onClick={() => handleDeleteDestination(destination)} sx={{p: 1.5}}><Delete /></IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+                )})}
+            </List>
+          </CardContent>
+        </Card>
+      )}
+
+       <Card>
         <CardContent>
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>הוסף יעד חדש</Typography>
           <PlaceSearch onPlaceSelect={handleAddDestination} placeholder="חפש והוסף מקום..."/>
