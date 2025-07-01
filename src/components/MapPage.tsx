@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Card, CardContent, List, ListItem, ListItemIcon, ListItemText, ListItemSecondaryAction, IconButton, Chip, Button, CircularProgress, FormControl, InputLabel, Select, MenuItem, useTheme, alpha } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
-import { Delete, Add, AutoAwesome as IdeasIcon, Route as RouteIcon, WrongLocation as HideRouteIcon } from '@mui/icons-material';
+import { Delete, Add, AutoAwesome as IdeasIcon, Route as RouteIcon, WrongLocation as HideRouteIcon, LocationOn as LocationOnIcon, AccessTime as AccessTimeIcon, Edit as EditIcon, Delete as DeleteIcon, FlightTakeoff, FlightLand, DirectionsCar, Explore, Restaurant, Hotel, LocalActivity } from '@mui/icons-material';
 import GoogleMapComponent from './GoogleMap';
 import PlaceSearch from './PlaceSearch';
 import type { Destination, Trip } from '../types';
 import { db } from '../firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 interface MapPageProps {
   trips: Trip[];
@@ -23,6 +24,7 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
   const [suggestedIdeas, setSuggestedIdeas] = useState<Destination[]>([]);
   const [isFindingSuggestions, setIsFindingSuggestions] = useState(false);
   const theme = useTheme();
+  const isMobile = window.innerWidth <= 600; // Add this line to define isMobile
 
   useEffect(() => {
     const trip = trips.find(t => t.id === selectedTripId);
@@ -98,6 +100,173 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
       other: { color: 'default' as const, label: 'אחר' }
     };
     return infoMap[type] || infoMap.other;
+  };
+
+  const destinationInfoElementContainer = {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    backgroundColor: 'background.paper',
+    borderRadius: '16px',
+    boxShadow: '0 8px 28px rgba(0, 0, 0, 0.12)',
+    padding: '20px',
+    maxWidth: isMobile ? '85vw' : '350px',
+    width: isMobile ? '100%' : 'auto',
+    position: 'relative' as const,
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      bottom: '-10px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      width: 0,
+      height: 0,
+      borderLeft: '10px solid transparent',
+      borderRight: '10px solid transparent',
+      borderTop: '10px solid',
+      borderTopColor: 'background.paper',
+    }
+  };
+
+  const markerIconStyles = {
+    backgroundColor: theme.palette.primary.main,
+    borderRadius: '50%',
+    width: isMobile ? '32px' : '28px',
+    height: isMobile ? '32px' : '28px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    fontWeight: 600,
+    fontSize: isMobile ? '14px' : '12px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    border: '3px solid white',
+    zIndex: 1000
+  };
+
+  const destinationCards = destinations.map((destination, index) => (
+    <motion.div
+      key={destination.id}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
+    >
+      <Card 
+        sx={{ 
+          mb: 2, 
+          cursor: 'pointer',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          transition: 'all 0.3s ease',
+          '&:hover': { 
+            boxShadow: '0 8px 28px rgba(0, 0, 0, 0.12)',
+            transform: 'translateY(-4px)'
+          }
+        }}
+        onClick={() => handleDestinationSelect(destination)}
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+            <Box sx={markerIconStyles}>
+              {index + 1}
+            </Box>
+            
+            <Box sx={{ flex: 1 }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 700, 
+                  mb: 1,
+                  color: 'text.primary'
+                }}
+              >
+                {destination.name}
+              </Typography>
+              
+              {destination.description && (
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    mb: 2, 
+                    color: 'text.secondary',
+                    lineHeight: 1.5
+                  }}
+                >
+                  {destination.description}
+                </Typography>
+              )}
+              
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                <Chip 
+                  icon={<LocationOnIcon />}
+                  label={destination.category || 'יעד'}
+                  size="small"
+                  sx={{ 
+                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                    color: theme.palette.primary.main,
+                    fontWeight: 500
+                  }}
+                />
+                {destination.estimatedTime && (
+                  <Chip 
+                    icon={<AccessTimeIcon />}
+                    label={`${destination.estimatedTime} שעות`}
+                    size="small"
+                    sx={{ 
+                      backgroundColor: alpha(theme.palette.secondary.main, 0.1),
+                      color: theme.palette.secondary.main,
+                      fontWeight: 500
+                    }}
+                  />
+                )}
+              </Box>
+            </Box>
+            
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                sx={{
+                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                  color: theme.palette.primary.main,
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                    transform: 'scale(1.1)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+              
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteDestination(destination);
+                }}
+                sx={{
+                  backgroundColor: alpha(theme.palette.error.main, 0.1),
+                  color: theme.palette.error.main,
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.error.main, 0.2),
+                    transform: 'scale(1.1)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+    </motion.div>
+  ));
+
+  const handleDestinationSelect = (destination: Destination) => {
+    setSelectedDestination(destination);
   };
 
   return (

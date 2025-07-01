@@ -26,16 +26,21 @@ export interface User {
 export interface Destination {
   id: string;
   name: string;
-  lat: number;
-  lng: number;
-  description?: string;
-  type: 'hotel' | 'restaurant' | 'attraction' | 'transport';
-  rating?: number;
-  photos?: string[];
+  latitude: number;
+  longitude: number;
   address?: string;
-  placeId?: string;
-  estimatedCost?: number;
+  description?: string;
+  category?: string;
+  estimatedTime?: number;
+  photos?: string[];
   notes?: string;
+  order?: number;
+  visitDate?: Date | Timestamp;
+  rating?: number;
+  cost?: number;
+  isVisited?: boolean;
+  createdAt?: Date | Timestamp;
+  updatedAt?: Date | Timestamp;
 }
 
 export interface Trip {

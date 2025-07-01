@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleMap, OverlayView, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, OverlayView, DirectionsRenderer, LoadScript, Marker, InfoWindow } from '@react-google-maps/api';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
-import { Box, Typography, Chip, Paper, IconButton, Rating, Button } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import DirectionsIcon from '@mui/icons-material/Directions';
+import { Box, Typography, Chip, Paper, IconButton, Rating, Button, useTheme, useMediaQuery, Card, CardContent, Avatar } from '@mui/material';
+import { LocationOn, Star, AccessTime, DirectionsWalk, Close as CloseIcon } from '@mui/icons-material';
 import type { Destination } from '../types';
+import { alpha } from '@mui/material/styles';
 
 const mapContainerStyle = { width: '100%', height: '450px' };
 const defaultCenter = { lat: 40.7128, lng: -74.0060 };
@@ -20,6 +20,8 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ destinations, u
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const clustererRef = useRef<MarkerClusterer | null>(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
@@ -98,51 +100,205 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ destinations, u
     if (destination) window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}`, '_blank');
   };
 
-  return (
-    <GoogleMap
-      mapContainerStyle={mapContainerStyle}
-      center={defaultCenter}
-      zoom={8}
-      onLoad={onMapLoad}
-      onClick={() => setSelectedDestination(null)}
-      options={{
-        styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }],
-        disableDefaultUI: true,
-        zoomControl: true,
-        fullscreenControl: true,
-        clickableIcons: false,
-      }}
-    >
-      {directions && showRoute && <DirectionsRenderer directions={directions} options={{ suppressMarkers: true, polylineOptions: { strokeColor: '#5D5FEF', strokeWeight: 6, strokeOpacity: 0.9 } }} />}
-      
-      {userPosition && (
-        <OverlayView position={userPosition} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-          <Box><div className="user-location-pulse"></div><div className="user-location-dot"></div></Box>
-        </OverlayView>
-      )}
+  const renderInfoWindow = () => {
+    if (!selectedDestination) return null;
 
-      {selectedDestination && (
-        <OverlayView
-          position={{ lat: selectedDestination.lat, lng: selectedDestination.lng }}
-          mapPaneName={OverlayView.FLOAT_PANE}
-          getPixelPositionOffset={(width, height) => ({ x: -(width / 2), y: -(height + 25) })}
-        >
-          <Paper elevation={12} sx={{ width: 290, borderRadius: '20px', overflow: 'hidden', pointerEvents: 'auto', transform: 'translateY(0)', transition: 'transform 0.3s ease' }}>
-            {selectedDestination.photos?.[0] && <Box component="img" src={selectedDestination.photos[0]} alt={selectedDestination.name} sx={{ width: '100%', height: '130px', objectFit: 'cover' }} />}
-            <Box sx={{ p: 2, position: 'relative', backgroundColor: 'rgba(255, 255, 255, 0.98)', backdropFilter: 'blur(8px)' }}>
-              <IconButton size="small" onClick={(e) => { e.stopPropagation(); setSelectedDestination(null); }} sx={{ position: 'absolute', top: 12, left: 12, zIndex: 1, backgroundColor: 'rgba(255,255,255,0.8)' }}><CloseIcon fontSize="small" /></IconButton>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, pr: '30px' }}>{selectedDestination.name}</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                <Chip size="small" label={getDestinationInfo(selectedDestination.type).label} sx={{ backgroundColor: getDestinationInfo(selectedDestination.type).color, color: 'white', fontWeight: 600, fontSize: '12px' }} />
-                {selectedDestination.rating && <Rating value={selectedDestination.rating} readOnly size="small" precision={0.5} />}
+    return (
+      <InfoWindow
+        position={{ 
+          lat: selectedDestination.lat, 
+          lng: selectedDestination.lng 
+        }}
+        onCloseClick={() => setSelectedDestination(null)}
+        options={{
+          pixelOffset: new window.google.maps.Size(0, -40),
+          maxWidth: isMobile ? 300 : 350,
+          disableAutoPan: false
+        }}
+      >
+        <Box sx={{ 
+          width: isMobile ? '280px' : '320px',
+          maxWidth: '90vw',
+          overflow: 'hidden'
+        }}>
+          <Card elevation={0} sx={{ 
+            borderRadius: '16px',
+            border: 'none',
+            boxShadow: 'none'
+          }}>
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              {/* כותרת עם סגירה */}
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'flex-start', 
+                justifyContent: 'space-between',
+                mb: 2
+              }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 700,
+                      fontSize: isMobile ? '1.1rem' : '1.25rem',
+                      lineHeight: 1.2,
+                      color: 'text.primary',
+                      mb: 0.5
+                    }}
+                  >
+                    {selectedDestination.name}
+                  </Typography>
+                  
+                  {selectedDestination.address && (
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: 'text.secondary',
+                        fontSize: '0.875rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5
+                      }}
+                    >
+                      <LocationOn sx={{ fontSize: '16px' }} />
+                      {selectedDestination.address}
+                    </Typography>
+                  )}
+                </Box>
+                
+                <IconButton 
+                  size="small"
+                  onClick={() => setSelectedDestination(null)}
+                  sx={{ 
+                    ml: 1,
+                    color: 'text.secondary',
+                    '&:hover': { 
+                      backgroundColor: alpha(theme.palette.grey[500], 0.1) 
+                    }
+                  }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
               </Box>
-              {selectedDestination.notes && <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{selectedDestination.notes}</Typography>}
-              <Button variant="contained" fullWidth startIcon={<DirectionsIcon />} onClick={() => handleGetDirections(selectedDestination)}>ניווט</Button>
-            </Box>
-          </Paper>
-        </OverlayView>
-      )}
-    </GoogleMap>
+
+              {/* תיאור */}
+              {selectedDestination.notes && (
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    mb: 2, 
+                    color: 'text.primary',
+                    lineHeight: 1.5
+                  }}
+                >
+                  {selectedDestination.notes}
+                </Typography>
+              )}
+
+              {/* תוויות מידע */}
+              <Box sx={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: 1, 
+                mb: 2 
+              }}>
+                <Chip 
+                  label={getDestinationInfo(selectedDestination.type).label}
+                  size="small"
+                  color="primary"
+                  sx={{ 
+                    height: '24px',
+                    fontSize: '0.75rem',
+                    fontWeight: 500
+                  }}
+                />
+                
+                {selectedDestination.estimatedTime && (
+                  <Chip 
+                    icon={<AccessTime sx={{ fontSize: '14px' }} />}
+                    label={`${selectedDestination.estimatedTime} שעות`}
+                    size="small"
+                    sx={{ 
+                      height: '24px',
+                      fontSize: '0.75rem',
+                      backgroundColor: alpha(theme.palette.secondary.main, 0.1),
+                      color: theme.palette.secondary.main
+                    }}
+                  />
+                )}
+                
+                {selectedDestination.rating && (
+                  <Chip 
+                    icon={<Star sx={{ fontSize: '14px' }} />}
+                    label={selectedDestination.rating.toFixed(1)}
+                    size="small"
+                    sx={{ 
+                      height: '24px',
+                      fontSize: '0.75rem',
+                      backgroundColor: alpha(theme.palette.warning.main, 0.1),
+                      color: theme.palette.warning.main
+                    }}
+                  />
+                )}
+              </Box>
+
+              {/* פעולות */}
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 1,
+                justifyContent: 'flex-end'
+              }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<DirectionsWalk />}
+                  onClick={() => handleGetDirections(selectedDestination)}
+                  sx={{ 
+                    borderRadius: '20px',
+                    fontSize: '0.75rem',
+                    textTransform: 'none'
+                  }}
+                >
+                  הוראות הגעה
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+      </InfoWindow>
+    );
+  };
+
+  return (
+    <LoadScript googleMapsApiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY || ''}>
+      <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        center={defaultCenter}
+        zoom={8}
+        onLoad={onMapLoad}
+        onClick={() => setSelectedDestination(null)}
+        options={{
+          disableDefaultUI: false,
+          zoomControl: true,
+          streetViewControl: false,
+          mapTypeControl: false,
+          fullscreenControl: !isMobile,
+          styles: [
+            { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }],
+            { featureType: "transit", elementType: "labels", stylers: [{ visibility: "off" }] }],
+          ]
+        }}
+      >
+        {directions && showRoute && <DirectionsRenderer directions={directions} options={{ suppressMarkers: true, polylineOptions: { strokeColor: '#5D5FEF', strokeWeight: 6, strokeOpacity: 0.9 } }} />}
+        
+        {userPosition && (
+          <OverlayView position={userPosition} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <Box><div className="user-location-pulse"></div><div className="user-location-dot"></div></Box>
+          </OverlayView>
+        )}
+
+        {renderInfoWindow()}
+      </GoogleMap>
+    </LoadScript>
   );
 };
 
