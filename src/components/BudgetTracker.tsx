@@ -123,7 +123,7 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ trip }) => {
           toast.success('הוצאה חדשה נוספה!');
         }
         handleCloseDialog();
-    } catch(e) {
+    } catch {
         toast.error("שגיאה בשמירת הפריט");
     }
   };
@@ -135,7 +135,7 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ trip }) => {
     try {
         await deleteDoc(itemRef);
         toast.success('ההוצאה נמחקה.');
-    } catch (e) {
+    } catch {
         toast.error("שגיאה במחיקת ההוצאה");
     }
   };
@@ -150,7 +150,7 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ trip }) => {
           await updateDoc(tripRef, { budget: budgetValue });
           toast.success('התקציב עודכן בהצלחה!');
           setIsEditBudgetOpen(false);
-      } catch (error) {
+      } catch {
           toast.error('שגיאה בעדכון התקציב.');
       }
   }

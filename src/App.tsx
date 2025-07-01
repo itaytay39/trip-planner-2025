@@ -520,6 +520,8 @@ function App() {
     if (isNewTrip) {
       try {
         const { id, ...newTripData } = editingTrip;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const _unusedId = id;
         await addDoc(collection(db, "trips"), {
           ...newTripData,
           createdAt: serverTimestamp(),
@@ -533,6 +535,8 @@ function App() {
       const tripRef = doc(db, 'trips', editingTrip.id);
       try {
         const { id, ...dataToUpdate } = editingTrip;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const _unusedId = id;
         await updateDoc(tripRef, dataToUpdate);
         toast.success("הטיול עודכן בהצלחה!");
       } catch (e) {

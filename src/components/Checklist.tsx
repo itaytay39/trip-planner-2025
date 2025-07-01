@@ -1,5 +1,5 @@
  import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Box, Card, CardContent, Typography, List, ListItem, Checkbox, TextField, Button, IconButton, LinearProgress, ListItemText, alpha, useTheme, CircularProgress, Collapse, ListSubheader, ListItemButton, ListItemIcon } from '@mui/material';
+import { Box, Card, CardContent, Typography, List, ListItem, Checkbox, TextField, Button, IconButton, LinearProgress, ListItemText, CircularProgress, Collapse, ListItemButton, ListItemIcon } from '@mui/material';
 import { Add, Delete, ExpandLess, ExpandMore } from '@mui/icons-material';
 import type { ChecklistItem } from '../types';
 import { db } from '../firebase';
@@ -78,7 +78,7 @@ const Checklist: React.FC<ChecklistProps> = ({ tripId }) => {
   const [loading, setLoading] = useState(true);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
-  const theme = useTheme();
+
 
   const populateDefaultChecklist = useCallback(async () => {
     if (!tripId) return;
@@ -137,7 +137,7 @@ const Checklist: React.FC<ChecklistProps> = ({ tripId }) => {
     });
 
     return () => unsubscribe();
-  }, [tripId, populateDefaultChecklist]);
+  }, [tripId, populateDefaultChecklist, loading, openCategories]);
 
   const handleToggle = async (item: ChecklistItem) => {
     const itemRef = doc(db, 'trips', tripId, 'checklist', item.id);

@@ -1,5 +1,8 @@
 // src/types/index.ts
 
+// Import Firebase types
+import { Timestamp } from 'firebase/firestore';
+
 // ===================================
 // טיפוסים מרכזיים של המידע (Data Models)
 // ===================================
@@ -48,8 +51,8 @@ export interface Trip {
   currency?: string;
   participants?: string[];
   status: 'planning' | 'active' | 'completed' | 'confirmed';
-  createdAt?: any;
-  updatedAt?: any;
+  createdAt?: Date | Timestamp;
+  updatedAt?: Date | Timestamp;
   days?: number;
 }
 
@@ -73,7 +76,7 @@ export interface ChecklistItem {
   priority?: 'low' | 'medium' | 'high';
   dueDate?: Date;
   notes?: string;
-  createdAt?: any;
+  createdAt?: Date | Timestamp;
 }
 
 export interface Route {
@@ -100,7 +103,7 @@ export interface GoogleMapProps {
   showDirections?: boolean;
   center?: { lat: number; lng: number };
   zoom?: number;
-  route?: any;
-  setRoute?: (route: any) => void;
-  onMapLoad?: (map: any) => void;
+  route?: google.maps.DirectionsResult | null;
+  setRoute?: (route: google.maps.DirectionsResult | null) => void;
+  onMapLoad?: (map: google.maps.Map) => void;
 }

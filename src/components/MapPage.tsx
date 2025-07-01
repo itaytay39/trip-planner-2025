@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Box, Typography, Card, CardContent, List, ListItem, ListItemIcon, ListItemText, ListItemSecondaryAction, IconButton, Chip, Button, CircularProgress, FormControl, InputLabel, Select, MenuItem, useTheme, alpha, Fab } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Card, CardContent, List, ListItem, ListItemIcon, ListItemText, ListItemSecondaryAction, IconButton, Chip, Button, CircularProgress, FormControl, InputLabel, Select, MenuItem, useTheme, alpha } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import { Delete, Add, AutoAwesome as IdeasIcon, Route as RouteIcon, WrongLocation as HideRouteIcon } from '@mui/icons-material';
 import GoogleMapComponent from './GoogleMap';
@@ -18,7 +18,7 @@ interface MapPageProps {
 const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTripId }) => {
   const [currentTrip, setCurrentTrip] = useState<Trip | null>(null);
   const [destinations, setDestinations] = useState<Destination[]>([]);
-  const [userPosition, setUserPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [userPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [showRoute, setShowRoute] = useState(false); // Controls route visibility
   const [suggestedIdeas, setSuggestedIdeas] = useState<Destination[]>([]);
   const [isFindingSuggestions, setIsFindingSuggestions] = useState(false);
