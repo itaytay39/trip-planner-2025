@@ -486,8 +486,41 @@ const HomePage = ({ trips, user, onEditTrip, onAddTrip, onViewOnMap, onDeleteTri
 
 function App() {
   const [activeTab, setActiveTab] = useState('home');
-  const [tripsData, setTripsData] = useState<Trip[] | null>(null);
-  const [userData, setUserData] = useState<User | null>(null);
+  const [tripsData, setTripsData] = useState<Trip[] | null>([
+    // נתונים זמניים לצפייה
+    {
+      id: '1',
+      title: 'טיול לניו יורק',
+      dates: '15-30 דצמבר 2024',
+      budget: '$3,500',
+      status: 'confirmed',
+      days: 15,
+      destinations: [
+        { id: '1', name: 'טיימס סקוור', latitude: 40.7580, longitude: -73.9855 },
+        { id: '2', name: 'סנטרל פארק', latitude: 40.7829, longitude: -73.9654 }
+      ]
+    },
+    {
+      id: '2', 
+      title: 'טיול לקליפורניה',
+      dates: '10-25 ינואר 2025',
+      budget: '$4,200',
+      status: 'planning',
+      days: 16,
+      destinations: [
+        { id: '3', name: 'הוליווד', latitude: 34.0928, longitude: -118.3287 },
+        { id: '4', name: 'גשר זהב', latitude: 37.8199, longitude: -122.4783 }
+      ]
+    }
+  ]);
+  const [userData, setUserData] = useState<User | null>({
+    id: '1',
+    name: 'משתמש לדוגמה',
+    email: 'user@example.com',
+    totalSpent: 15000,
+    savedPlaces: 12,
+    trips: 5
+  });
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [isNewTrip, setIsNewTrip] = useState(false);
   const [selectedTripIdForMap, setSelectedTripIdForMap] = useState<string>('all');
@@ -495,38 +528,31 @@ function App() {
   const theme = useTheme();
 
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_Maps_API_KEY,
+    googleMapsApiKey: import.meta.env.VITE_Maps_API_KEY || '',
     libraries,
   });
 
+  // Comment out Firebase loading for now
+  /*
   useEffect(() => {
-    const unsubscribeTrips = onSnapshot(collection(db, 'trips'), (snapshot) => {
-      const fetchedTrips = snapshot.docs.map(
-        (doc) => ({ ...doc.data(), id: doc.id } as Trip)
-      );
-      setTripsData(fetchedTrips);
-    }, (error) => {
-        console.error("Error fetching trips: ", error);
-        setTripsData([]);
+    const unsubscribe = onSnapshot(collection(db, "trips"), (snapshot) => {
+      const trips = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Trip[];
+      setTripsData(trips);
     });
 
-    const unsubscribeUser = onSnapshot(doc(db, 'users', 'mainUser'), (doc) => {
-      if (doc.exists()) {
-        setUserData(doc.data() as User);
-      } else {
-        console.error('User document "mainUser" not found!');
-        setUserData({ name: "אורח" });
-      }
-    }, (error) => {
-        console.error("Error fetching user: ", error);
-        setUserData({ name: "אורח" });
+    // Simulate user data
+    setUserData({
+      id: "1",
+      name: "John Doe",
+      email: "john@example.com",
+      totalSpent: 15000,
+      savedPlaces: 12,
+      trips: 5
     });
 
-    return () => {
-      unsubscribeTrips();
-      unsubscribeUser();
-    };
+    return () => unsubscribe();
   }, []);
+  */
 
   const handleViewTripOnMap = (tripId: string) => {
     setSelectedTripIdForMap(tripId);
