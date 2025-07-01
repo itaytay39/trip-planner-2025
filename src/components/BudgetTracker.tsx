@@ -37,6 +37,8 @@ import type { Trip } from '../types';
 import { db } from '../firebase';
 import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+import { alpha } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 
 interface BudgetTrackerProps {
   trip: Trip;
@@ -57,6 +59,8 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ trip }) => {
     amount: '',
     date: new Date().toISOString().split('T')[0]
   });
+
+  const theme = useTheme();
 
   useEffect(() => {
     if (!trip || !trip.id) return;
@@ -199,18 +203,113 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({ trip }) => {
       </Box>
 
       <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>הוצאות אחרונות</Typography>
-      <List sx={{ backgroundColor: 'background.paper', borderRadius: '16px' }}>
+      <List sx={{ backgroundColor: 'background.paper', borderRadius: '16px', overflow: 'hidden' }}>
         {items.map((item) => {
           const Icon = categoryIcons[item.category];
 
           return (
-            <ListItem key={item.id}>
-              <ListItemIcon><Icon sx={{ color: categoryColors[item.category] }} /></ListItemIcon>
-              <ListItemText primary={item.title} secondary={`${categoryLabels[item.category]} • ${new Date(item.date).toLocaleDateString('he-IL')}`}/>
-              <ListItemSecondaryAction sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>₪{item.amount.toLocaleString()}</Typography>
-                <IconButton size="small" onClick={() => handleOpenDialog(item)}><Edit fontSize="small" /></IconButton>
-                <IconButton size="small" onClick={() => handleDeleteItem(item.id)} color="error"><Delete fontSize="small" /></IconButton>
+            <ListItem 
+              key={item.id}
+              sx={{
+                py: 2,
+                px: 3,
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                '&:last-child': {
+                  borderBottom: 'none'
+                },
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                  '& .action-buttons': {
+                    opacity: 1,
+                    transform: 'translateX(0)',
+                  }
+                }
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 48 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '12px',
+                    backgroundColor: alpha(categoryColors[item.category], 0.1),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Icon sx={{ color: categoryColors[item.category], fontSize: 20 }} />
+                </Box>
+              </ListItemIcon>
+              <ListItemText 
+                primary={
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    {item.title}
+                  </Typography>
+                }
+                secondary={
+                  <Typography variant="body2" color="text.secondary">
+                    {categoryLabels[item.category]} • {new Date(item.date).toLocaleDateString('he-IL')}
+                  </Typography>
+                }
+              />
+              <ListItemSecondaryAction 
+                className="action-buttons"
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  opacity: { xs: 1, sm: 0.7 },
+                  transform: { xs: 'translateX(0)', sm: 'translateX(8px)' },
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 700, 
+                    color: 'primary.main',
+                    mr: 2,
+                    minWidth: 'fit-content',
+                  }}
+                >
+                  ₪{item.amount.toLocaleString()}
+                </Typography>
+                <IconButton 
+                  size="small" 
+                  onClick={() => handleOpenDialog(item)}
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                    color: theme.palette.primary.main,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                      transform: 'scale(1.1)',
+                    }
+                  }}
+                >
+                  <Edit fontSize="small" />
+                </IconButton>
+                <IconButton 
+                  size="small" 
+                  onClick={() => handleDeleteItem(item.id)}
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    backgroundColor: alpha(theme.palette.error.main, 0.1),
+                    color: theme.palette.error.main,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.error.main, 0.2),
+                      transform: 'scale(1.1)',
+                    }
+                  }}
+                >
+                  <Delete fontSize="small" />
+                </IconButton>
               </ListItemSecondaryAction>
             </ListItem>
           );

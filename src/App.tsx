@@ -147,9 +147,13 @@ const TripCard = ({ trip, onEdit, onDelete, onCardClick }: { trip: Trip; onEdit:
             )} 0%, ${alpha(theme.palette.background.paper, 0.7)} 100%)`,
             backdropFilter: 'blur(20px)',
             border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
             position: 'relative',
-            '&:hover': { boxShadow: '0 25px 50px rgba(0,0,0,0.15)' },
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:hover': { 
+              boxShadow: '0 20px 60px rgba(0,0,0,0.12)',
+              transform: 'translateY(-2px)'
+            },
           }}
         >
           <Box
@@ -161,51 +165,71 @@ const TripCard = ({ trip, onEdit, onDelete, onCardClick }: { trip: Trip; onEdit:
               position: 'relative',
               display: 'flex',
               alignItems: 'flex-end',
-              padding: isMobile ? '16px' : '20px',
+              padding: isMobile ? '16px' : '24px',
               backgroundColor: 'grey.200'
             }}
           >
             <Box
               sx={{
                 position: 'absolute',
-                top: 16,
-                right: 16,
+                top: isMobile ? 12 : 16,
+                right: isMobile ? 12 : 16,
                 display: 'flex',
-                gap: 1,
+                gap: 1.5,
+                zIndex: 2,
               }}
             >
-              {/* 4. הוספנו כפתור מחיקה */}
               <IconButton
-                size="small"
+                size={isMobile ? "small" : "medium"}
                 onClick={(e) => { e.stopPropagation(); onDelete(trip.id); }}
                 sx={{
-                  background: alpha(theme.palette.error.main, 0.8),
+                  background: 'rgba(244, 67, 54, 0.9)',
                   color: 'white',
                   backdropFilter: 'blur(10px)',
-                  '&:hover': { background: alpha(theme.palette.error.main, 1) },
+                  boxShadow: '0 4px 20px rgba(244, 67, 54, 0.3)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  width: isMobile ? 36 : 40,
+                  height: isMobile ? 36 : 40,
+                  transition: 'all 0.2s ease',
+                  '&:hover': { 
+                    background: 'rgba(244, 67, 54, 1)',
+                    transform: 'scale(1.05)',
+                    boxShadow: '0 6px 25px rgba(244, 67, 54, 0.4)',
+                  },
                 }}
               >
-                <DeleteIcon fontSize="small" />
+                <DeleteIcon fontSize={isMobile ? "small" : "medium"} />
               </IconButton>
               <IconButton
-                size="small"
+                size={isMobile ? "small" : "medium"}
                 onClick={(e) => { e.stopPropagation(); onEdit(trip); }}
                 sx={{
-                  background: alpha(theme.palette.background.paper, 0.9),
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  color: theme.palette.text.primary,
                   backdropFilter: 'blur(10px)',
-                  '&:hover': { background: alpha(theme.palette.background.paper, 1) },
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  width: isMobile ? 36 : 40,
+                  height: isMobile ? 36 : 40,
+                  transition: 'all 0.2s ease',
+                  '&:hover': { 
+                    background: 'rgba(255, 255, 255, 1)',
+                    transform: 'scale(1.05)',
+                    boxShadow: '0 6px 25px rgba(0, 0, 0, 0.15)',
+                  },
                 }}
               >
-                <EditIcon fontSize="small" />
+                <EditIcon fontSize={isMobile ? "small" : "medium"} />
               </IconButton>
             </Box>
-            <Box>
+            <Box sx={{ zIndex: 1 }}>
               <Typography
                 variant={isMobile ? 'h6' : 'h5'}
                 sx={{
                   color: 'white',
                   fontWeight: 800,
-                  textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                  textShadow: '0 2px 10px rgba(0,0,0,0.5)',
+                  mb: 0.5,
                 }}
               >
                 {trip.title}
@@ -223,38 +247,67 @@ const TripCard = ({ trip, onEdit, onDelete, onCardClick }: { trip: Trip; onEdit:
               </Typography>
             </Box>
           </Box>
-          <CardContent sx={{ padding: isMobile ? '16px' : '20px' }}>
+          <CardContent sx={{ padding: isMobile ? '20px' : '24px' }}>
             <Box
               sx={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                mb: 2,
+                mb: 3,
               }}
             >
               <Chip
                 label={trip.status === 'confirmed' ? 'מאושר' : 'בתכנון'}
                 color={trip.status === 'confirmed' ? 'success' : 'warning'}
                 size="small"
-                sx={{ fontWeight: 600, borderRadius: '12px' }}
+                sx={{ 
+                  fontWeight: 600, 
+                  borderRadius: '12px',
+                  height: 28,
+                  fontSize: '0.8rem',
+                }}
               />
               <Typography
-                variant={isMobile ? 'body1' : 'h6'}
-                sx={{ fontWeight: 700, color: theme.palette.primary.main }}
+                variant={isMobile ? 'h6' : 'h5'}
+                sx={{ 
+                  fontWeight: 800, 
+                  color: theme.palette.primary.main,
+                  fontSize: isMobile ? '1.1rem' : '1.3rem',
+                }}
               >
                 {trip.budget}
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Flight fontSize="small" color="action" />
-                <Typography variant="body2" color="text.secondary">
+            <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Flight 
+                  fontSize="small" 
+                  sx={{ color: theme.palette.primary.main, opacity: 0.8 }} 
+                />
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: 'text.secondary',
+                    fontWeight: 500,
+                    fontSize: isMobile ? '0.75rem' : '0.875rem',
+                  }}
+                >
                   {trip.days || 0} ימים
                 </Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <LocationOn fontSize="small" color="action" />
-                <Typography variant="body2" color="text.secondary">
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <LocationOn 
+                  fontSize="small" 
+                  sx={{ color: theme.palette.secondary.main, opacity: 0.8 }} 
+                />
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: 'text.secondary',
+                    fontWeight: 500,
+                    fontSize: isMobile ? '0.75rem' : '0.875rem',
+                  }}
+                >
                   {destinationCount} יעדים
                 </Typography>
               </Box>
