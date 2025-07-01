@@ -36,12 +36,12 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ destinations, u
 
     const markers = destinations.map(destination => {
       const marker = new window.google.maps.Marker({
-        position: { lat: destination.lat, lng: destination.lng }
+        position: { lat: destination.latitude, lng: destination.longitude }
       });
       marker.addListener('click', (e: google.maps.MapMouseEvent) => {
         e.domEvent.stopPropagation();
         setSelectedDestination(destination);
-        mapRef.current?.panTo({ lat: destination.lat, lng: destination.lng });
+        mapRef.current?.panTo({ lat: destination.latitude, lng: destination.longitude });
       });
       return marker;
     });
@@ -64,10 +64,10 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ destinations, u
     }
 
     const directionsService = new window.google.maps.DirectionsService();
-    const origin = { lat: destinations[0].lat, lng: destinations[0].lng };
-    const destinationPoint = { lat: destinations[destinations.length - 1].lat, lng: destinations[destinations.length - 1].lng };
+    const origin = { lat: destinations[0].latitude, lng: destinations[0].longitude };
+    const destinationPoint = { lat: destinations[destinations.length - 1].latitude, lng: destinations[destinations.length - 1].longitude };
     const waypoints = destinations.slice(1, -1).map(dest => ({
-      location: { lat: dest.lat, lng: dest.lng },
+      location: { lat: dest.latitude, lng: dest.longitude },
       stopover: true,
     }));
 
@@ -85,19 +85,20 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ destinations, u
     );
   }, [destinations, showRoute]);
 
-  const getDestinationInfo = (type: Destination['type']) => {
+  const getDestinationInfo = (category?: string) => {
     const infoMap = {
-      hotel: { color: '#4A90E2', label: 'מלון' },
-      restaurant: { color: '#F5A623', label: 'מסעדה' },
-      attraction: { color: '#50E3C2', label: 'אטרקציה' },
-      transport: { color: '#BD10E0', label: 'תחבורה' },
-      other: { color: '#9B9B9B', label: 'אחר' }
+      hotel: { color: '#2196F3', label: 'מלון' },
+      restaurant: { color: '#FF5722', label: 'מסעדה' },
+      attraction: { color: '#4CAF50', label: 'אטרקציה' },
+      transport: { color: '#FF9800', label: 'תחבורה' },
+      other: { color: '#9C27B0', label: 'אחר' }
     };
-    return infoMap[type] || infoMap.other;
+    
+    return infoMap[category as keyof typeof infoMap] || infoMap.other;
   };
 
   const handleGetDirections = (destination: Destination) => {
-    if (destination) window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}`, '_blank');
+    if (destination) window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination.latitude},${destination.longitude}`, '_blank');
   };
 
   const renderInfoWindow = () => {
@@ -106,8 +107,8 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ destinations, u
     return (
       <InfoWindow
         position={{ 
-          lat: selectedDestination.lat, 
-          lng: selectedDestination.lng 
+          lat: selectedDestination.latitude, 
+          lng: selectedDestination.longitude 
         }}
         onCloseClick={() => setSelectedDestination(null)}
         options={{
@@ -202,7 +203,7 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ destinations, u
                 mb: 2 
               }}>
                 <Chip 
-                  label={getDestinationInfo(selectedDestination.type).label}
+                  label={getDestinationInfo(selectedDestination.category).label}
                   size="small"
                   color="primary"
                   sx={{ 
@@ -283,8 +284,8 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ destinations, u
           mapTypeControl: false,
           fullscreenControl: !isMobile,
           styles: [
-            { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }],
-            { featureType: "transit", elementType: "labels", stylers: [{ visibility: "off" }] }],
+            { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+            { featureType: "transit", elementType: "labels", stylers: [{ visibility: "off" }] }
           ]
         }}
       >
