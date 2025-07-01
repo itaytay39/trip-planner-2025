@@ -25,11 +25,8 @@ import {
   Flight,
   Add,
   Notifications,
-  AttachMoney,
   Edit as EditIcon,
-  AutoAwesome as AutoAwesomeIcon,
-  UploadFile,
-  Delete as DeleteIcon // 1. הוספנו אייקון מחיקה
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useJsApiLoader } from '@react-google-maps/api';
 
@@ -43,7 +40,6 @@ import IdeasPage from './components/IdeasPage';
 
 // Import Firebase and Types
 import { db } from './firebase';
-// 2. הוספנו את 'deleteDoc'
 import { collection, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'; 
 import type { Trip, User } from './types';
 import toast from 'react-hot-toast';
@@ -124,129 +120,200 @@ const TripCard = ({ trip, onEdit, onDelete, onCardClick }: { trip: Trip; onEdit:
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const destinationCount = Array.isArray(trip.destinations) ? trip.destinations.length : 0;
   
-  const backgroundImage = trip.image
-    ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.3)} 0%, ${alpha(theme.palette.secondary.main, 0.3)} 100%), url(${trip.image})`
-    : `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.3)} 0%, ${alpha(theme.palette.secondary.main, 0.3)} 100%)`;
+  // צבעי גרדיאנט דינמיים לפי סטטוס הטיול
+  const getGradientColors = () => {
+    if (trip.status === 'confirmed') {
+      return {
+        primary: '#4CAF50',
+        secondary: '#8BC34A',
+        accent: '#C8E6C9'
+      };
+    }
+    return {
+      primary: theme.palette.primary.main,
+      secondary: theme.palette.secondary.main,
+      accent: alpha(theme.palette.primary.main, 0.1)
+    };
+  };
 
+  const colors = getGradientColors();
+  
   return (
     <motion.div
-      initial={{ opacity: 0, y: 50 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: 'easeOut' }}
-      whileHover={{ y: -5 }}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -20, scale: 0.95 }}
+      transition={{ 
+        duration: 0.5, 
+        ease: [0.25, 0.46, 0.45, 0.94] 
+      }}
+      whileHover={{ 
+        y: -8,
+        transition: { duration: 0.2 }
+      }}
       whileTap={{ scale: 0.98 }}
     >
       <Box onClick={() => onCardClick(trip.id)} sx={{ cursor: 'pointer' }}>
         <Card
           sx={{
-            borderRadius: isMobile ? '20px' : '24px',
+            borderRadius: '24px',
             overflow: 'hidden',
-            background: `linear-gradient(135deg, ${alpha(
-              theme.palette.background.paper,
-              0.9
-            )} 0%, ${alpha(theme.palette.background.paper, 0.7)} 100%)`,
+            background: `rgba(255, 255, 255, 0.7)`,
             backdropFilter: 'blur(20px)',
-            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+            border: `1px solid ${alpha('#ffffff', 0.2)}`,
+            boxShadow: `
+              0 8px 32px ${alpha(colors.primary, 0.15)},
+              0 0 0 1px ${alpha('#ffffff', 0.1)} inset
+            `,
             position: 'relative',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
             '&:hover': { 
-              boxShadow: '0 20px 60px rgba(0,0,0,0.12)',
-              transform: 'translateY(-2px)'
+              boxShadow: `
+                0 20px 60px ${alpha(colors.primary, 0.25)},
+                0 0 0 1px ${alpha('#ffffff', 0.2)} inset
+              `,
+              transform: 'translateY(-4px)',
+              '& .trip-actions': {
+                opacity: 1,
+                transform: 'translateY(0)'
+              }
             },
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '3px',
+              background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})`,
+              borderRadius: '24px 24px 0 0'
+            }
           }}
         >
+          {/* כותרת מעוגלת עם גרדיאנט */}
           <Box
             sx={{
-              height: isMobile ? 160 : 200,
-              backgroundImage: backgroundImage,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
+              height: isMobile ? 140 : 180,
+              background: `linear-gradient(135deg, 
+                ${alpha(colors.primary, 0.9)} 0%, 
+                ${alpha(colors.secondary, 0.8)} 50%,
+                ${alpha(colors.primary, 0.7)} 100%
+              )`,
               position: 'relative',
               display: 'flex',
               alignItems: 'flex-end',
-              padding: isMobile ? '16px' : '24px',
-              backgroundColor: 'grey.200'
+              padding: isMobile ? '20px' : '24px',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'url("data:image/svg+xml,%3Csvg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="white" fill-opacity="0.03"%3E%3Ccircle cx="20" cy="20" r="2"/%3E%3C/g%3E%3C/svg%3E")',
+                opacity: 0.3
+              }
             }}
           >
+            {/* כפתורי פעולה מרחפים */}
             <Box
+              className="trip-actions"
               sx={{
                 position: 'absolute',
-                top: isMobile ? 12 : 16,
-                right: isMobile ? 12 : 16,
+                top: isMobile ? 16 : 20,
+                right: isMobile ? 16 : 20,
                 display: 'flex',
-                gap: 1.5,
-                zIndex: 2,
+                gap: 1,
+                opacity: 0.7,
+                transform: 'translateY(-4px)',
+                transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
               }}
             >
-              <IconButton
-                size={isMobile ? "small" : "medium"}
-                onClick={(e) => { e.stopPropagation(); onDelete(trip.id); }}
-                sx={{
-                  background: 'rgba(244, 67, 54, 0.9)',
-                  color: 'white',
-                  backdropFilter: 'blur(10px)',
-                  boxShadow: '0 4px 20px rgba(244, 67, 54, 0.3)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  width: isMobile ? 36 : 40,
-                  height: isMobile ? 36 : 40,
-                  transition: 'all 0.2s ease',
-                  '&:hover': { 
-                    background: 'rgba(244, 67, 54, 1)',
-                    transform: 'scale(1.05)',
-                    boxShadow: '0 6px 25px rgba(244, 67, 54, 0.4)',
-                  },
-                }}
-              >
-                <DeleteIcon fontSize={isMobile ? "small" : "medium"} />
-              </IconButton>
-              <IconButton
-                size={isMobile ? "small" : "medium"}
-                onClick={(e) => { e.stopPropagation(); onEdit(trip); }}
-                sx={{
-                  background: 'rgba(255, 255, 255, 0.95)',
-                  color: theme.palette.text.primary,
-                  backdropFilter: 'blur(10px)',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  width: isMobile ? 36 : 40,
-                  height: isMobile ? 36 : 40,
-                  transition: 'all 0.2s ease',
-                  '&:hover': { 
-                    background: 'rgba(255, 255, 255, 1)',
-                    transform: 'scale(1.05)',
-                    boxShadow: '0 6px 25px rgba(0, 0, 0, 0.15)',
-                  },
-                }}
-              >
-                <EditIcon fontSize={isMobile ? "small" : "medium"} />
-              </IconButton>
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <IconButton
+                  size={isMobile ? "small" : "medium"}
+                  onClick={(e) => { e.stopPropagation(); onDelete(trip.id); }}
+                  sx={{
+                    background: 'rgba(244, 67, 54, 0.1)',
+                    backdropFilter: 'blur(10px)',
+                    color: '#f44336',
+                    border: '1px solid rgba(244, 67, 54, 0.2)',
+                    width: isMobile ? 36 : 40,
+                    height: isMobile ? 36 : 40,
+                    '&:hover': { 
+                      background: 'rgba(244, 67, 54, 0.2)',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <DeleteIcon fontSize={isMobile ? "small" : "medium"} />
+                </IconButton>
+              </motion.div>
+              
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <IconButton
+                  size={isMobile ? "small" : "medium"}
+                  onClick={(e) => { e.stopPropagation(); onEdit(trip); }}
+                  sx={{
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    color: 'white',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    width: isMobile ? 36 : 40,
+                    height: isMobile ? 36 : 40,
+                    '&:hover': { 
+                      background: 'rgba(255, 255, 255, 0.3)',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <EditIcon fontSize={isMobile ? "small" : "medium"} />
+                </IconButton>
+              </motion.div>
             </Box>
-            <Box sx={{ zIndex: 1 }}>
-              <Typography
-                variant={isMobile ? 'h6' : 'h5'}
-                sx={{
-                  color: 'white',
-                  fontWeight: 800,
-                  textShadow: '0 2px 10px rgba(0,0,0,0.5)',
-                  mb: 0.5,
-                }}
+
+            {/* תוכן הכותרת */}
+            <Box sx={{ zIndex: 2 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
               >
-                {trip.title}
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{
-                  color: alpha('#fff', 0.9),
-                  fontWeight: 500,
-                  textShadow: '0 1px 5px rgba(0,0,0,0.3)',
-                  fontSize: isMobile ? '12px' : '14px',
-                }}
+                <Typography
+                  variant={isMobile ? 'h6' : 'h5'}
+                  sx={{
+                    color: 'white',
+                    fontWeight: 700,
+                    textShadow: '0 2px 20px rgba(0,0,0,0.3)',
+                    mb: 1,
+                    letterSpacing: '-0.02em'
+                  }}
+                >
+                  {trip.title}
+                </Typography>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.3 }}
               >
-                {trip.dates}
-              </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: alpha('#fff', 0.9),
+                    fontWeight: 500,
+                    textShadow: '0 1px 10px rgba(0,0,0,0.2)',
+                    fontSize: isMobile ? '13px' : '14px',
+                  }}
+                >
+                  {trip.dates}
+                </Typography>
+              </motion.div>
             </Box>
           </Box>
+
+          {/* תוכן הכרטיס */}
           <CardContent sx={{ padding: isMobile ? '20px' : '24px' }}>
             <Box
               sx={{
@@ -256,61 +323,107 @@ const TripCard = ({ trip, onEdit, onDelete, onCardClick }: { trip: Trip; onEdit:
                 mb: 3,
               }}
             >
-              <Chip
-                label={trip.status === 'confirmed' ? 'מאושר' : 'בתכנון'}
-                color={trip.status === 'confirmed' ? 'success' : 'warning'}
-                size="small"
-                sx={{ 
-                  fontWeight: 600, 
-                  borderRadius: '12px',
-                  height: 28,
-                  fontSize: '0.8rem',
-                }}
-              />
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              >
+                <Chip
+                  label={trip.status === 'confirmed' ? '✈️ מאושר' : '📝 בתכנון'}
+                  sx={{ 
+                    fontWeight: 600, 
+                    borderRadius: '16px',
+                    height: 32,
+                    fontSize: '0.8rem',
+                    background: trip.status === 'confirmed' 
+                      ? `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`
+                      : `linear-gradient(135deg, #FF9800, #FFC107)`,
+                    color: 'white',
+                    border: 'none',
+                    boxShadow: `0 4px 12px ${alpha(colors.primary, 0.3)}`
+                  }}
+                />
+              </motion.div>
+              
               <Typography
                 variant={isMobile ? 'h6' : 'h5'}
                 sx={{ 
                   fontWeight: 800, 
-                  color: theme.palette.primary.main,
+                  background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
                   fontSize: isMobile ? '1.1rem' : '1.3rem',
                 }}
               >
                 {trip.budget}
               </Typography>
             </Box>
+
+            {/* נתונים */}
             <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Flight 
-                  fontSize="small" 
-                  sx={{ color: theme.palette.primary.main, opacity: 0.8 }} 
-                />
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: 'text.secondary',
-                    fontWeight: 500,
-                    fontSize: isMobile ? '0.75rem' : '0.875rem',
-                  }}
-                >
-                  {trip.days || 0} ימים
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <LocationOn 
-                  fontSize="small" 
-                  sx={{ color: theme.palette.secondary.main, opacity: 0.8 }} 
-                />
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: 'text.secondary',
-                    fontWeight: 500,
-                    fontSize: isMobile ? '0.75rem' : '0.875rem',
-                  }}
-                >
-                  {destinationCount} יעדים
-                </Typography>
-              </Box>
+              <motion.div
+                whileHover={{ y: -2 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: `0 4px 12px ${alpha(colors.primary, 0.3)}`
+                    }}
+                  >
+                    <Flight sx={{ fontSize: 16, color: 'white' }} />
+                  </Box>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: 'text.primary',
+                      fontWeight: 600,
+                      fontSize: isMobile ? '0.8rem' : '0.875rem',
+                    }}
+                  >
+                    {trip.days || 0} ימים
+                  </Typography>
+                </Box>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ y: -2 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      background: `linear-gradient(135deg, ${colors.secondary}, ${colors.primary})`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: `0 4px 12px ${alpha(colors.secondary, 0.3)}`
+                    }}
+                  >
+                    <LocationOn sx={{ fontSize: 16, color: 'white' }} />
+                  </Box>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: 'text.primary',
+                      fontWeight: 600,
+                      fontSize: isMobile ? '0.8rem' : '0.875rem',
+                    }}
+                  >
+                    {destinationCount} יעדים
+                  </Typography>
+                </Box>
+              </motion.div>
             </Box>
           </CardContent>
         </Card>
@@ -319,83 +432,17 @@ const TripCard = ({ trip, onEdit, onDelete, onCardClick }: { trip: Trip; onEdit:
   );
 };
 
-const QuickStats = ({ user }: { user: User }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const stats = [
-    {
-      icon: AttachMoney,
-      label: 'הוצאות',
-      value: `₪${(user.totalSpent || 0).toLocaleString()}`,
-      color: theme.palette.success.main,
-    },
-    {
-      icon: LocationOn,
-      label: 'מקומות שמורים',
-      value: user.savedPlaces || 0,
-      color: theme.palette.warning.main,
-    },
-    {
-      icon: Flight,
-      label: 'טיולים הושלמו',
-      value: user.trips || 0,
-      color: theme.palette.info.main,
-    },
-  ];
-  return (
-    <Box sx={{ display: 'flex', gap: isMobile ? 1 : 2, mb: 3 }}>
-      {stats.map((stat, index) => {
-        const Icon = stat.icon;
-        return (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.1, duration: 0.5 }}
-            style={{ flex: 1 }}
-          >
-            <Card
-              sx={{
-                borderRadius: isMobile ? '16px' : '20px',
-                background: `linear-gradient(135deg, ${alpha(
-                  stat.color,
-                  0.1
-                )} 0%, ${alpha(stat.color, 0.05)} 100%)`,
-                border: `1px solid ${alpha(stat.color, 0.2)}`,
-                padding: isMobile ? '12px' : '16px',
-                textAlign: 'center',
-                boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
-              }}
-            >
-              <Icon
-                sx={{ fontSize: isMobile ? 24 : 32, color: stat.color, mb: 1 }}
-              />
-              <Typography
-                variant={isMobile ? 'body1' : 'h6'}
-                sx={{ fontWeight: 700, color: stat.color }}
-              >
-                {stat.value}
-              </Typography>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ fontWeight: 500, fontSize: isMobile ? '10px' : '11px' }}
-              >
-                {stat.label}
-              </Typography>
-            </Card>
-          </motion.div>
-        );
-      })}
-    </Box>
-  );
-};
-
-const HomePage = ({ trips, user, onEditTrip, onAddTrip, onUploadTrip, onViewOnMap, onDeleteTrip }: { trips: Trip[]; user: User; onEditTrip: (trip: Trip) => void; onAddTrip: () => void; onUploadTrip: () => void; onViewOnMap: (tripId: string) => void; onDeleteTrip: (tripId: string) => void; }) => {
+const HomePage = ({ trips, user, onEditTrip, onAddTrip, onViewOnMap, onDeleteTrip }: { 
+  trips: Trip[]; 
+  user: User; 
+  onEditTrip: (trip: Trip) => void; 
+  onAddTrip: () => void; 
+  onViewOnMap: (tripId: string) => void; 
+  onDeleteTrip: (tripId: string) => void; 
+}) => {
   const isMobile = useMediaQuery('(max-width:600px)');
   return (
     <Box sx={{ padding: isMobile ? '16px' : '20px', paddingBottom: '100px' }}>
-      <QuickStats user={user} />
       <Box
         sx={{
           mb: 3,
@@ -433,18 +480,6 @@ const HomePage = ({ trips, user, onEditTrip, onAddTrip, onUploadTrip, onViewOnMa
       >
         <Add />
       </Fab>
-      <Fab
-        color="secondary"
-        onClick={onUploadTrip}
-        sx={{
-          position: 'fixed',
-          bottom: 170, 
-          right: 20,
-          boxShadow: '0 8px 25px rgba(120, 196, 212, 0.4)'
-        }}
-      >
-        <UploadFile />
-      </Fab>
     </Box>
   );
 };
@@ -455,8 +490,6 @@ function App() {
   const [userData, setUserData] = useState<User | null>(null);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [isNewTrip, setIsNewTrip] = useState(false);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedTripIdForMap, setSelectedTripIdForMap] = useState<string>('all');
   
   const theme = useTheme();
@@ -494,42 +527,6 @@ function App() {
       unsubscribeUser();
     };
   }, []);
-
-  const getRandomAmericanImage = () => {
-    const images = [
-      'https://images.pexels.com/photos/290386/pexels-photo-290386.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/161901/san-francisco-golden-gate-bridge-sunrise-california-161901.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/373924/pexels-photo-373924.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg?auto=compress&cs=tinysrgb&w=400'
-    ];
-    const randomIndex = Math.floor(Math.random() * images.length);
-    return images[randomIndex];
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const text = e.target?.result;
-      if (typeof text !== 'string') return;
-      try {
-        const tripData = JSON.parse(text);
-        const newTrip = { ...tripData, image: getRandomAmericanImage(), createdAt: serverTimestamp() };
-        await addDoc(collection(db, "trips"), newTrip);
-        toast.success("טיול חדש נוסף בהצלחה מהקובץ!");
-      } catch (error) {
-        toast.error("שגיאה בקריאת קובץ ה-JSON.");
-        console.error("Error parsing or uploading trip from file:", error);
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const handleTriggerUpload = () => {
-    fileInputRef.current?.click();
-  };
 
   const handleViewTripOnMap = (tripId: string) => {
     setSelectedTripIdForMap(tripId);
@@ -601,45 +598,6 @@ function App() {
     setIsNewTrip(false);
   };
   
-  const handleGenerateImage = async () => {
-    if (!editingTrip || !editingTrip.title) {
-        toast.error("אנא הזן שם לטיול תחילה.");
-        return;
-    }
-    setIsGeneratingImage(true);
-    try {
-        const prompt = `A beautiful, vibrant, picturesque travel photograph of ${editingTrip.title}. Cinematic, detailed, high quality.`;
-        const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1} };
-        const apiKey = "";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            throw new Error(`שגיאת רשת: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-
-        if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-            const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-            setEditingTrip(prev => prev ? { ...prev, image: imageUrl } : null);
-            toast.success("תמונה נוצרה בהצלחה!");
-        } else {
-            throw new Error("לא התקבלה תמונה מה-API.");
-        }
-    } catch (error) {
-        console.error("Error generating image:", error);
-        toast.error("שגיאה ביצירת התמונה.");
-    } finally {
-        setIsGeneratingImage(false);
-    }
-  };
-
   const renderContent = () => {
     if (!isLoaded || !userData || tripsData === null) {
       return (
@@ -656,7 +614,7 @@ function App() {
     
     switch (activeTab) {
       case 'home':
-        return <HomePage trips={tripsData} user={userData} onEditTrip={handleEditTrip} onAddTrip={handleOpenAddTrip} onUploadTrip={handleTriggerUpload} onViewOnMap={handleViewTripOnMap} onDeleteTrip={handleDeleteTrip} />;
+        return <HomePage trips={tripsData} user={userData} onEditTrip={handleEditTrip} onAddTrip={handleOpenAddTrip} onViewOnMap={handleViewTripOnMap} onDeleteTrip={handleDeleteTrip} />;
       case 'checklist':
         return tripsData.length > 0 ? <Checklist tripId={tripsData[0].id} /> : <Typography sx={{p: 3}}>בחר טיול כדי לראות רשימת משימות.</Typography>;
       case 'ideas': 
@@ -668,7 +626,7 @@ function App() {
       case 'map':
         return <MapPage trips={tripsData} selectedTripId={selectedTripIdForMap} setSelectedTripId={setSelectedTripIdForMap} />;
       default:
-        return <HomePage trips={tripsData} user={userData} onEditTrip={handleEditTrip} onAddTrip={handleOpenAddTrip} onUploadTrip={handleTriggerUpload} onViewOnMap={handleViewTripOnMap} onDeleteTrip={handleDeleteTrip} />;
+        return <HomePage trips={tripsData} user={userData} onEditTrip={handleEditTrip} onAddTrip={handleOpenAddTrip} onViewOnMap={handleViewTripOnMap} onDeleteTrip={handleDeleteTrip} />;
     }
   };
 
@@ -721,21 +679,6 @@ function App() {
               onChange={(e) => setEditingTrip(prev => prev ? {...prev, budget: e.target.value} : null)}
               fullWidth
             />
-            <TextField
-              label="כתובת תמונה"
-              value={editingTrip?.image || ''}
-              onChange={(e) => setEditingTrip(prev => prev ? {...prev, image: e.target.value} : null)}
-              fullWidth
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={handleGenerateImage} disabled={isGeneratingImage}>
-                      {isGeneratingImage ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
           </Box>
         </DialogContent>
         <DialogActions>
@@ -743,14 +686,6 @@ function App() {
           <Button onClick={handleSaveTrip} variant="contained">שמור שינויים</Button>
         </DialogActions>
       </Dialog>
-      
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileUpload}
-        style={{ display: 'none' }}
-        accept=".json"
-      />
     </Box>
   );
 }

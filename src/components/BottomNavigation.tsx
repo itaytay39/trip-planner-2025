@@ -1,21 +1,7 @@
 import React from 'react';
-import {
-  Box,
-  Typography,
-  IconButton,
-  useTheme,
-  alpha,
-  useMediaQuery,
-} from '@mui/material';
-import {
-  Home as HomeIcon,
-  Map as MapIcon,
-  AccountBalanceWallet as WalletIcon,
-  Person as PersonIcon,
-  CheckCircleOutline as CheckCircleOutlineIcon,
-  LightbulbOutlined as LightbulbOutlinedIcon
-} from '@mui/icons-material';
-// 1. הסרנו את אייקון ה-RouteIcon
+import { motion } from 'framer-motion';
+import { BottomNavigation as MuiBottomNavigation, BottomNavigationAction, Paper, useTheme, alpha, Box } from '@mui/material';
+import { Home, CheckCircle, Map, Person, Lightbulb } from '@mui/icons-material';
 
 interface BottomNavigationProps {
   activeTab: string;
@@ -24,82 +10,143 @@ interface BottomNavigationProps {
 
 const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, setActiveTab }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // 2. עדכנו את רשימת הכפתורים והסרנו את "מסלולים"
-  const tabs = [
-    { id: 'home', icon: HomeIcon, label: 'בית' },
-    { id: 'checklist', icon: CheckCircleOutlineIcon, label: 'רשימה' },
-    { id: 'ideas', icon: LightbulbOutlinedIcon, label: 'רעיונות' },
-    { id: 'budget', icon: WalletIcon, label: 'תקציב' },
-    { id: 'map', icon: MapIcon, label: 'מפה' },
-    { id: 'profile', icon: PersonIcon, label: 'פרופיל' },
+  const navigationItems = [
+    { value: 'home', label: 'בית', icon: Home },
+    { value: 'checklist', label: 'רשימה', icon: CheckCircle },
+    { value: 'map', label: 'מפה', icon: Map },
+    { value: 'profile', label: 'פרופיל', icon: Person },
   ];
 
   return (
-    <Box
+    <Paper
+      elevation={0}
       sx={{
         position: 'fixed',
         bottom: 0,
         left: 0,
         right: 0,
-        background: `linear-gradient(135deg, ${alpha(
-          theme.palette.background.paper,
-          0.95
-        )} 0%, ${alpha(theme.palette.background.paper, 0.8)} 100%)`,
+        height: 80,
+        borderRadius: '24px 24px 0 0',
+        background: `rgba(${theme.palette.mode === 'dark' ? '18, 18, 18' : '255, 255, 255'}, 0.95)`,
         backdropFilter: 'blur(20px)',
         borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        padding: isMobile ? '8px 16px' : '12px 20px',
-        zIndex: 100,
-        boxShadow: '0 -2px 20px rgba(0,0,0,0.05)',
+        boxShadow: '0 -8px 32px rgba(0,0,0,0.12)',
+        zIndex: 1000,
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '1px',
+          background: `linear-gradient(90deg, transparent, ${alpha(theme.palette.primary.main, 0.3)}, transparent)`
+        }
       }}
     >
-      <Box
+      <MuiBottomNavigation
+        value={activeTab}
+        onChange={(event, newValue) => setActiveTab(newValue)}
         sx={{
-          display: 'flex',
-          justifyContent: 'space-around',
-          alignItems: 'center',
+          height: '100%',
+          backgroundColor: 'transparent',
+          '& .MuiBottomNavigationAction-root': {
+            minWidth: 'auto',
+            paddingTop: '12px',
+            paddingBottom: '12px',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            position: 'relative',
+            borderRadius: '16px',
+            margin: '8px 4px',
+            '&.Mui-selected': {
+              color: theme.palette.primary.main,
+              '& .MuiBottomNavigationAction-label': {
+                fontSize: '12px',
+                fontWeight: 600,
+                transform: 'translateY(2px)'
+              }
+            },
+            '& .MuiBottomNavigationAction-label': {
+              fontSize: '11px',
+              fontWeight: 500,
+              transition: 'all 0.3s ease'
+            }
+          }
         }}
       >
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+        {navigationItems.map((item, index) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.value;
+          
           return (
-            <IconButton
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+            <BottomNavigationAction
+              key={item.value}
+              label={item.label}
+              value={item.value}
+              icon={
+                <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeIndicator"
+                      style={{
+                        position: 'absolute',
+                        top: -8,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 32,
+                        height: 32,
+                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                        borderRadius: '16px',
+                        border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                      }}
+                      initial={false}
+                      animate={{
+                        scale: isActive ? 1 : 0,
+                        opacity: isActive ? 1 : 0
+                      }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 500,
+                        damping: 30
+                      }}
+                    />
+                  )}
+                  <motion.div
+                    animate={{
+                      scale: isActive ? 1.1 : 1,
+                      y: isActive ? -2 : 0
+                    }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 25
+                    }}
+                  >
+                    <Icon 
+                      sx={{ 
+                        fontSize: 24,
+                        color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                        filter: isActive ? `drop-shadow(0 2px 8px ${alpha(theme.palette.primary.main, 0.3)})` : 'none',
+                        transition: 'all 0.3s ease'
+                      }} 
+                    />
+                  </motion.div>
+                </Box>
+              }
               sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 0.5,
-                padding: isMobile ? '8px' : '12px',
-                borderRadius: '16px',
-                background: isActive
-                  ? alpha(theme.palette.primary.main, 0.1)
-                  : 'transparent',
-                color: isActive
-                  ? theme.palette.primary.main
-                  : theme.palette.text.secondary,
                 '&:hover': {
-                  background: alpha(theme.palette.primary.main, 0.05),
-                },
+                  backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                  '& .MuiSvgIcon-root': {
+                    transform: 'scale(1.05)',
+                  }
+                }
               }}
-            >
-              <Icon fontSize={isMobile ? 'small' : 'medium'} />
-              <Typography
-                variant="caption"
-                sx={{
-                  fontSize: isMobile ? '10px' : '11px',
-                  fontWeight: isActive ? 600 : 400,
-                }}
-              >
-                {tab.label}
-              </Typography>
-            </IconButton>
+            />
           );
         })}
-      </Box>
-    </Box>
+      </MuiBottomNavigation>
+    </Paper>
   );
 };
 

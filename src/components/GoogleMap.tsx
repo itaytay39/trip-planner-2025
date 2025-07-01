@@ -1,108 +1,108 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleMap, OverlayView, DirectionsRenderer, LoadScript, Marker, InfoWindow } from '@react-google-maps/api';
-import { MarkerClusterer } from '@googlemaps/markerclusterer';
-import { Box, Typography, Chip, Paper, IconButton, Rating, Button, useTheme, useMediaQuery, Card, CardContent, Avatar } from '@mui/material';
-import { LocationOn, Star, AccessTime, DirectionsWalk, Close as CloseIcon } from '@mui/icons-material';
+import React, { useState, useCallback, useEffect } from 'react';
+import { GoogleMap, LoadScript, Marker, InfoWindow, DirectionsRenderer } from '@react-google-maps/api';
 import type { Destination } from '../types';
-import { alpha } from '@mui/material/styles';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Box, 
+  Typography, 
+  Chip, 
+  IconButton, 
+  useTheme, 
+  useMediaQuery, 
+  Card, 
+  CardContent, 
+  Avatar, 
+  Button,
+  alpha,
+  Rating
+} from '@mui/material';
+import { 
+  LocationOn, 
+  Star, 
+  AccessTime, 
+  DirectionsWalk, 
+  Close as CloseIcon,
+  Navigation,
+  Phone,
+  Language as WebIcon,
+  Restaurant,
+  Hotel,
+  AttractionsOutlined,
+  DirectionsBus
+} from '@mui/icons-material';
 
-const mapContainerStyle = { width: '100%', height: '450px' };
-const defaultCenter = { lat: 40.7128, lng: -74.0060 };
-
-interface GoogleMapComponentProps {
+interface GoogleMapProps {
   destinations: Destination[];
-  userPosition: { lat: number; lng: number } | null;
-  showRoute: boolean; // New prop to control route visibility
+  center: { lat: number; lng: number };
+  zoom?: number;
+  onMapLoad?: (map: google.maps.Map) => void;
+  route?: google.maps.DirectionsResult | null;
+  setRoute?: (route: google.maps.DirectionsResult | null) => void;
 }
 
-const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ destinations, userPosition, showRoute }) => {
+const GoogleMapComponent: React.FC<GoogleMapProps> = ({ 
+  destinations, 
+  center, 
+  zoom = 10, 
+  onMapLoad, 
+  route, 
+  setRoute 
+}) => {
   const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
-  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const clustererRef = useRef<MarkerClusterer | null>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
+  const onLoad = useCallback((mapInstance: google.maps.Map) => {
+    setMap(mapInstance);
+    if (onMapLoad) onMapLoad(mapInstance);
+  }, [onMapLoad]);
+
+  const onUnmount = useCallback(() => {
+    setMap(null);
   }, []);
 
-  // Effect for creating and managing markers and clusters
-  useEffect(() => {
-    if (!mapRef.current) return;
-    if (clustererRef.current) {
-      clustererRef.current.clearMarkers();
-    }
-
-    const markers = destinations.map(destination => {
-      const marker = new window.google.maps.Marker({
-        position: { lat: destination.latitude, lng: destination.longitude }
-      });
-      marker.addListener('click', (e: google.maps.MapMouseEvent) => {
-        e.domEvent.stopPropagation();
-        setSelectedDestination(destination);
-        mapRef.current?.panTo({ lat: destination.latitude, lng: destination.longitude });
-      });
-      return marker;
-    });
-
-    clustererRef.current = new MarkerClusterer({ map: mapRef.current, markers });
-
-  }, [destinations]);
-
-  // Effect for calculating and displaying directions when `showRoute` is true
-  useEffect(() => {
-    if (!showRoute || destinations.length < 2) {
-      setDirections(null);
-      // Fit map to markers if route is hidden
-      if (mapRef.current && destinations.length > 0) {
-        const bounds = new window.google.maps.LatLngBounds();
-        destinations.forEach(dest => bounds.extend(dest));
-        mapRef.current.fitBounds(bounds);
+  const getCategoryInfo = (category?: string) => {
+    const categoryMap = {
+      hotel: { 
+        icon: Hotel, 
+        color: '#2196F3', 
+        label: 'מלון',
+        bgColor: 'rgba(33, 150, 243, 0.1)'
+      },
+      restaurant: { 
+        icon: Restaurant, 
+        color: '#FF5722', 
+        label: 'מסעדה',
+        bgColor: 'rgba(255, 87, 34, 0.1)'
+      },
+      attraction: { 
+        icon: AttractionsOutlined, 
+        color: '#4CAF50', 
+        label: 'אטרקציה',
+        bgColor: 'rgba(76, 175, 80, 0.1)'
+      },
+      transport: { 
+        icon: DirectionsBus, 
+        color: '#FF9800', 
+        label: 'תחבורה',
+        bgColor: 'rgba(255, 152, 0, 0.1)'
       }
-      return;
-    }
-
-    const directionsService = new window.google.maps.DirectionsService();
-    const origin = { lat: destinations[0].latitude, lng: destinations[0].longitude };
-    const destinationPoint = { lat: destinations[destinations.length - 1].latitude, lng: destinations[destinations.length - 1].longitude };
-    const waypoints = destinations.slice(1, -1).map(dest => ({
-      location: { lat: dest.latitude, lng: dest.longitude },
-      stopover: true,
-    }));
-
-    directionsService.route(
-      { origin, destination: destinationPoint, waypoints, travelMode: window.google.maps.TravelMode.DRIVING },
-      (result, status) => {
-        if (status === window.google.maps.DirectionsStatus.OK && result) {
-          setDirections(result);
-          // Auto-fit map to the entire route
-          if (mapRef.current && result.routes[0]?.bounds) {
-            mapRef.current.fitBounds(result.routes[0].bounds);
-          }
-        }
-      }
-    );
-  }, [destinations, showRoute]);
-
-  const getDestinationInfo = (category?: string) => {
-    const infoMap = {
-      hotel: { color: '#2196F3', label: 'מלון' },
-      restaurant: { color: '#FF5722', label: 'מסעדה' },
-      attraction: { color: '#4CAF50', label: 'אטרקציה' },
-      transport: { color: '#FF9800', label: 'תחבורה' },
-      other: { color: '#9C27B0', label: 'אחר' }
     };
     
-    return infoMap[category as keyof typeof infoMap] || infoMap.other;
+    return categoryMap[category as keyof typeof categoryMap] || {
+      icon: LocationOn,
+      color: '#9C27B0',
+      label: 'אחר',
+      bgColor: 'rgba(156, 39, 176, 0.1)'
+    };
   };
 
-  const handleGetDirections = (destination: Destination) => {
-    if (destination) window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination.latitude},${destination.longitude}`, '_blank');
-  };
-
-  const renderInfoWindow = () => {
+  const renderModernInfoWindow = () => {
     if (!selectedDestination) return null;
+
+    const categoryInfo = getCategoryInfo(selectedDestination.category);
+    const IconComponent = categoryInfo.icon;
 
     return (
       <InfoWindow
@@ -113,193 +113,303 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ destinations, u
         onCloseClick={() => setSelectedDestination(null)}
         options={{
           pixelOffset: new window.google.maps.Size(0, -40),
-          maxWidth: isMobile ? 300 : 350,
+          maxWidth: isMobile ? 320 : 380,
           disableAutoPan: false
         }}
       >
-        <Box sx={{ 
-          width: isMobile ? '280px' : '320px',
-          maxWidth: '90vw',
-          overflow: 'hidden'
-        }}>
-          <Card elevation={0} sx={{ 
-            borderRadius: '16px',
-            border: 'none',
-            boxShadow: 'none'
-          }}>
-            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              {/* כותרת עם סגירה */}
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'flex-start', 
-                justifyContent: 'space-between',
-                mb: 2
-              }}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 700,
-                      fontSize: isMobile ? '1.1rem' : '1.25rem',
-                      lineHeight: 1.2,
-                      color: 'text.primary',
-                      mb: 0.5
-                    }}
-                  >
-                    {selectedDestination.name}
-                  </Typography>
-                  
-                  {selectedDestination.address && (
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: 'text.secondary',
-                        fontSize: '0.875rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 0.5
-                      }}
-                    >
-                      <LocationOn sx={{ fontSize: '16px' }} />
-                      {selectedDestination.address}
-                    </Typography>
-                  )}
-                </Box>
-                
-                <IconButton 
-                  size="small"
-                  onClick={() => setSelectedDestination(null)}
-                  sx={{ 
-                    ml: 1,
-                    color: 'text.secondary',
-                    '&:hover': { 
-                      backgroundColor: alpha(theme.palette.grey[500], 0.1) 
-                    }
-                  }}
-                >
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </Box>
-
-              {/* תיאור */}
-              {selectedDestination.notes && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.8, y: 20 }}
+          transition={{ 
+            duration: 0.3, 
+            ease: [0.25, 0.46, 0.45, 0.94] 
+          }}
+        >
+          <Card
+            elevation={0}
+            sx={{
+              width: isMobile ? 300 : 360,
+              borderRadius: '20px',
+              overflow: 'hidden',
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(20px)',
+              border: `1px solid ${alpha('#ffffff', 0.3)}`,
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '4px',
+                background: `linear-gradient(90deg, ${categoryInfo.color}, ${alpha(categoryInfo.color, 0.6)})`,
+                borderRadius: '20px 20px 0 0'
+              }
+            }}
+          >
+            {/* כותרת עם אייקון */}
+            <Box
+              sx={{
+                background: `linear-gradient(135deg, ${categoryInfo.bgColor}, ${alpha(categoryInfo.color, 0.05)})`,
+                padding: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2
+              }}
+            >
+              <Avatar
+                sx={{
+                  background: `linear-gradient(135deg, ${categoryInfo.color}, ${alpha(categoryInfo.color, 0.8)})`,
+                  width: 48,
+                  height: 48,
+                  boxShadow: `0 8px 24px ${alpha(categoryInfo.color, 0.3)}`
+                }}
+              >
+                <IconComponent sx={{ color: 'white', fontSize: 24 }} />
+              </Avatar>
+              
+              <Box sx={{ flex: 1 }}>
                 <Typography 
-                  variant="body2" 
+                  variant="h6" 
                   sx={{ 
-                    mb: 2, 
+                    fontWeight: 700,
                     color: 'text.primary',
-                    lineHeight: 1.5
+                    fontSize: isMobile ? '1.1rem' : '1.25rem',
+                    lineHeight: 1.2,
+                    mb: 0.5
                   }}
                 >
-                  {selectedDestination.notes}
+                  {selectedDestination.name}
                 </Typography>
-              )}
-
-              {/* תוויות מידע */}
-              <Box sx={{ 
-                display: 'flex', 
-                flexWrap: 'wrap', 
-                gap: 1, 
-                mb: 2 
-              }}>
+                
                 <Chip 
-                  label={getDestinationInfo(selectedDestination.category).label}
+                  label={categoryInfo.label}
                   size="small"
-                  color="primary"
                   sx={{ 
                     height: '24px',
                     fontSize: '0.75rem',
-                    fontWeight: 500
+                    fontWeight: 600,
+                    background: `linear-gradient(135deg, ${categoryInfo.color}, ${alpha(categoryInfo.color, 0.8)})`,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px'
                   }}
                 />
-                
-                {selectedDestination.estimatedTime && (
-                  <Chip 
-                    icon={<AccessTime sx={{ fontSize: '14px' }} />}
-                    label={`${selectedDestination.estimatedTime} שעות`}
-                    size="small"
+              </Box>
+
+              <IconButton
+                size="small"
+                onClick={() => setSelectedDestination(null)}
+                sx={{
+                  background: alpha('#000', 0.05),
+                  '&:hover': { background: alpha('#000', 0.1) }
+                }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Box>
+
+            <CardContent sx={{ padding: '20px' }}>
+              {/* כתובת */}
+              {selectedDestination.address && (
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 2 }}>
+                  <LocationOn 
                     sx={{ 
-                      height: '24px',
-                      fontSize: '0.75rem',
-                      backgroundColor: alpha(theme.palette.secondary.main, 0.1),
-                      color: theme.palette.secondary.main
-                    }}
+                      color: categoryInfo.color, 
+                      fontSize: 18, 
+                      mt: 0.2 
+                    }} 
                   />
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: 'text.secondary',
+                      fontSize: '0.875rem',
+                      lineHeight: 1.4
+                    }}
+                  >
+                    {selectedDestination.address}
+                  </Typography>
+                </Box>
+              )}
+
+              {/* תיאור */}
+              {selectedDestination.description && (
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: 'text.primary',
+                    mb: 3,
+                    fontSize: '0.875rem',
+                    lineHeight: 1.5
+                  }}
+                >
+                  {selectedDestination.description}
+                </Typography>
+              )}
+
+              {/* מידע נוסף */}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+                {selectedDestination.rating && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Rating 
+                      value={selectedDestination.rating} 
+                      size="small" 
+                      readOnly 
+                      precision={0.5}
+                    />
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                      ({selectedDestination.rating})
+                    </Typography>
+                  </Box>
                 )}
                 
-                {selectedDestination.rating && (
-                  <Chip 
-                    icon={<Star sx={{ fontSize: '14px' }} />}
-                    label={selectedDestination.rating.toFixed(1)}
-                    size="small"
-                    sx={{ 
-                      height: '24px',
-                      fontSize: '0.75rem',
-                      backgroundColor: alpha(theme.palette.warning.main, 0.1),
-                      color: theme.palette.warning.main
-                    }}
-                  />
+                {selectedDestination.estimatedTime && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <AccessTime sx={{ fontSize: 16, color: 'text.secondary' }} />
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                      {selectedDestination.estimatedTime}ש' מוערך
+                    </Typography>
+                  </Box>
+                )}
+
+                {selectedDestination.cost && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography variant="caption" sx={{ color: categoryInfo.color, fontWeight: 700 }}>
+                      ₪{selectedDestination.cost}
+                    </Typography>
+                  </Box>
                 )}
               </Box>
 
-              {/* פעולות */}
-              <Box sx={{ 
-                display: 'flex', 
-                gap: 1,
-                justifyContent: 'flex-end'
-              }}>
+              {/* כפתורי פעולה */}
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Button
+                  variant="contained"
                   size="small"
-                  variant="outlined"
-                  startIcon={<DirectionsWalk />}
+                  startIcon={<Navigation />}
                   onClick={() => handleGetDirections(selectedDestination)}
-                  sx={{ 
-                    borderRadius: '20px',
-                    fontSize: '0.75rem',
-                    textTransform: 'none'
+                  sx={{
+                    borderRadius: '16px',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    background: `linear-gradient(135deg, ${categoryInfo.color}, ${alpha(categoryInfo.color, 0.8)})`,
+                    boxShadow: `0 4px 16px ${alpha(categoryInfo.color, 0.3)}`,
+                    '&:hover': {
+                      background: `linear-gradient(135deg, ${alpha(categoryInfo.color, 0.9)}, ${categoryInfo.color})`,
+                      boxShadow: `0 6px 20px ${alpha(categoryInfo.color, 0.4)}`
+                    }
                   }}
                 >
-                  הוראות הגעה
+                  נווט
                 </Button>
+
+                {selectedDestination.notes && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      borderRadius: '16px',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      borderColor: alpha(categoryInfo.color, 0.3),
+                      color: categoryInfo.color,
+                      '&:hover': {
+                        borderColor: categoryInfo.color,
+                        background: alpha(categoryInfo.color, 0.05)
+                      }
+                    }}
+                  >
+                    פרטים נוספים
+                  </Button>
+                )}
               </Box>
             </CardContent>
           </Card>
-        </Box>
+        </motion.div>
       </InfoWindow>
     );
   };
 
-  return (
-    <LoadScript googleMapsApiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY || ''}>
-      <GoogleMap
-        mapContainerStyle={mapContainerStyle}
-        center={defaultCenter}
-        zoom={8}
-        onLoad={onMapLoad}
-        onClick={() => setSelectedDestination(null)}
-        options={{
-          disableDefaultUI: false,
-          zoomControl: true,
-          streetViewControl: false,
-          mapTypeControl: false,
-          fullscreenControl: !isMobile,
-          styles: [
-            { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
-            { featureType: "transit", elementType: "labels", stylers: [{ visibility: "off" }] }
-          ]
-        }}
-      >
-        {directions && showRoute && <DirectionsRenderer directions={directions} options={{ suppressMarkers: true, polylineOptions: { strokeColor: '#5D5FEF', strokeWeight: 6, strokeOpacity: 0.9 } }} />}
-        
-        {userPosition && (
-          <OverlayView position={userPosition} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-            <Box><div className="user-location-pulse"></div><div className="user-location-dot"></div></Box>
-          </OverlayView>
-        )}
+  const handleGetDirections = (destination: Destination) => {
+    if (destination) {
+      window.open(
+        `https://www.google.com/maps/dir/?api=1&destination=${destination.latitude},${destination.longitude}`, 
+        '_blank'
+      );
+    }
+  };
 
-        {renderInfoWindow()}
-      </GoogleMap>
-    </LoadScript>
+  const createCustomMarker = (destination: Destination) => {
+    const categoryInfo = getCategoryInfo(destination.category);
+    
+    return {
+      path: 'M12,2C8.13,2 5,5.13 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9C19,5.13 15.87,2 12,2Z',
+      fillColor: categoryInfo.color,
+      fillOpacity: 1,
+      strokeColor: '#ffffff',
+      strokeWeight: 2,
+      scale: 1.5,
+      anchor: new google.maps.Point(12, 22)
+    };
+  };
+
+  return (
+    <GoogleMap
+      mapContainerStyle={{
+        width: '100%',
+        height: '100%',
+        borderRadius: isMobile ? '16px' : '20px',
+        overflow: 'hidden'
+      }}
+      center={center}
+      zoom={zoom}
+      onLoad={onLoad}
+      onUnmount={onUnmount}
+      options={{
+        disableDefaultUI: false,
+        zoomControl: true,
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: !isMobile,
+        styles: [
+          { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+          { featureType: "transit", elementType: "labels", stylers: [{ visibility: "off" }] },
+          { 
+            featureType: "water", 
+            stylers: [{ color: "#a2daf2" }] 
+          },
+          { 
+            featureType: "landscape", 
+            stylers: [{ color: "#f5f5f5" }] 
+          },
+          { 
+            featureType: "road", 
+            elementType: "geometry", 
+            stylers: [{ color: "#ffffff" }] 
+          }
+        ]
+      }}
+    >
+      <AnimatePresence>
+        {destinations.map((destination) => (
+          <Marker
+            key={destination.id}
+            position={{ lat: destination.latitude, lng: destination.longitude }}
+            icon={createCustomMarker(destination)}
+            onClick={() => setSelectedDestination(destination)}
+            animation={google.maps.Animation.DROP}
+            title={destination.name}
+          />
+        ))}
+      </AnimatePresence>
+
+      {selectedDestination && renderModernInfoWindow()}
+
+      {route && <DirectionsRenderer directions={route} />}
+    </GoogleMap>
   );
 };
 
