@@ -26,8 +26,9 @@ import {
   EmojiEvents
 } from '@mui/icons-material';
 import type { User } from '../types';
-import { db } from '../firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+// Firebase imports disabled for local development
+// import { db } from '../firebase';
+// import { doc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 interface UserProfileProps {
@@ -65,12 +66,14 @@ const UserProfile: React.FC<UserProfileProps> = ({ user }) => {
   const userLevel = getLevel(completedTrips);
 
   const handleSaveProfile = async () => {
-    const userRef = doc(db, 'users', 'mainUser');
     try {
-      await updateDoc(userRef, {
-        name: editFormData.name,
-        avatar: editFormData.avatar
-      });
+      // Local update only - Firebase disabled for development
+      // const userRef = doc(db, 'users', 'mainUser');
+      // await updateDoc(userRef, {
+      //   name: editFormData.name,
+      //   avatar: editFormData.avatar
+      // });
+      
       toast.success("הפרופיל עודכן בהצלחה!");
       handleCloseEditDialog();
     } catch (e) {

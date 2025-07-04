@@ -2,8 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Box, Card, CardContent, Typography, List, ListItem, Checkbox, TextField, Button, IconButton, LinearProgress, ListItemText, CircularProgress, Collapse, ListItemButton, ListItemIcon } from '@mui/material';
 import { Add, Delete, ExpandLess, ExpandMore } from '@mui/icons-material';
 import type { ChecklistItem } from '../types';
-import { db } from '../firebase';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, writeBatch } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 // רשימת הציוד המעודכנת והמקיפה לטיול 3 שבועות בארצות הברית
@@ -136,24 +134,30 @@ const Checklist: React.FC<ChecklistProps> = ({ tripId }) => {
   const [loading, setLoading] = useState(true);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
-  const populateDefaultChecklist = useCallback(async () => {
-    if (!tripId) return;
-    const checklistCollectionRef = collection(db, 'trips', tripId, 'checklist');
-    const batch = writeBatch(db);
+  const populateDefaultChecklist = useCallback(() => {
+    const checklistItems: ChecklistItem[] = [];
     
     Object.entries(defaultChecklistCategories).forEach(([category, catItems]) => {
-        catItems.forEach(item => {
-            const docRef = doc(checklistCollectionRef);
-            batch.set(docRef, {
+        catItems.forEach((item, index) => {
+            checklistItems.push({
+                id: `${category}-${index}`,
                 text: item.text,
                 category: category,
                 completed: false,
-                createdAt: serverTimestamp()
+                tripId: tripId
             });
         });
     });
 
-    await batch.commit();
+    setItems(checklistItems);
+    
+    // Set all categories to open initially
+    const initialCategories: Record<string, boolean> = {};
+    Object.keys(defaultChecklistCategories).forEach(category => {
+        initialCategories[category] = true;
+    });
+    setOpenCategories(initialCategories);
+    
     toast.success('רשימת ציוד מקיפה נוספה לטיול!');
   }, [tripId]);
 
@@ -164,57 +168,40 @@ const Checklist: React.FC<ChecklistProps> = ({ tripId }) => {
     }
 
     setLoading(true);
-    const checklistCollectionRef = collection(db, 'trips', tripId, 'checklist');
-    const q = query(checklistCollectionRef, orderBy('createdAt', 'asc'));
-
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      if (snapshot.empty && !loading) { // Run only once if empty
-        await populateDefaultChecklist();
-      } else {
-        const fetchedItems = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as ChecklistItem[];
-        setItems(fetchedItems);
-
-        // Intelligently set initial state for categories
-        if (Object.keys(openCategories).length === 0 && fetchedItems.length > 0) {
-            const initialCategories: Record<string, boolean> = {};
-            fetchedItems.forEach(item => {
-                if (item.category) {
-                    initialCategories[item.category] = true; // Default to open
-                }
-            });
-            setOpenCategories(initialCategories);
-        }
-        setLoading(false);
-      }
-    }, (error) => {
-      console.error("Error fetching checklist:", error);
-      toast.error("שגיאה בטעינת המשימות");
+    // Simulate loading time
+    setTimeout(() => {
+      populateDefaultChecklist();
       setLoading(false);
-    });
+    }, 500);
+  }, [tripId, populateDefaultChecklist]);
 
-    return () => unsubscribe();
-  }, [tripId, populateDefaultChecklist, loading, openCategories]);
-
-  const handleToggle = async (item: ChecklistItem) => {
-    const itemRef = doc(db, 'trips', tripId, 'checklist', item.id);
-    await updateDoc(itemRef, { completed: !item.completed });
+  const handleToggle = (item: ChecklistItem) => {
+    setItems(prevItems => 
+      prevItems.map(i => 
+        i.id === item.id ? { ...i, completed: !i.completed } : i
+      )
+    );
   };
 
-  const handleAddItem = async (category: string) => {
+  const handleAddItem = (category: string) => {
     if (newItemText.trim() === '') return;
-    const checklistCollectionRef = collection(db, 'trips', tripId, 'checklist');
-    await addDoc(checklistCollectionRef, {
-        text: newItemText,
-        completed: false,
-        category: category,
-        createdAt: serverTimestamp()
-    });
+    
+    const newItem: ChecklistItem = {
+      id: Date.now().toString(),
+      text: newItemText,
+      completed: false,
+      category: category,
+      tripId: tripId
+    };
+    
+    setItems(prevItems => [...prevItems, newItem]);
     setNewItemText('');
+    toast.success('פריט נוסף לרשימה!');
   };
 
-  const handleDeleteItem = async (id: string) => {
-    const itemRef = doc(db, 'trips', tripId, 'checklist', id);
-    await deleteDoc(itemRef);
+  const handleDeleteItem = (id: string) => {
+    setItems(prevItems => prevItems.filter(item => item.id !== id));
+    toast.success('פריט נמחק מהרשימה!');
   };
 
   const completedPercentage = useMemo(() => {
@@ -250,7 +237,7 @@ const Checklist: React.FC<ChecklistProps> = ({ tripId }) => {
           </Typography>
           <Box sx={{ mb: 3 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, fontWeight: 500 }}>
-              {Math.round(completedPercentage)}% הושלמו
+              {Math.round(completedPercentage)}% הושלמו ({items.filter(item => item.completed).length} מתוך {items.length})
             </Typography>
             <LinearProgress variant="determinate" value={completedPercentage} sx={{ height: 10, borderRadius: 5 }} />
           </Box>
@@ -258,7 +245,7 @@ const Checklist: React.FC<ChecklistProps> = ({ tripId }) => {
             {Object.entries(groupedItems).map(([category, catItems]) => (
                 <Box key={category}>
                     <ListItemButton onClick={() => handleToggleCategory(category)}>
-                        <ListItemText primary={<Typography variant="h6" sx={{fontWeight: 600}}>{category}</Typography>} />
+                        <ListItemText primary={<Typography variant="h6" sx={{fontWeight: 600}}>{category} ({catItems.filter(item => item.completed).length}/{catItems.length})</Typography>} />
                         {openCategories[category] ? <ExpandLess /> : <ExpandMore />}
                     </ListItemButton>
                     <Collapse in={openCategories[category]} timeout="auto" unmountOnExit>

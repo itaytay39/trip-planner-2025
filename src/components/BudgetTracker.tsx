@@ -34,8 +34,9 @@ import {
 } from '@mui/icons-material';
 import type { BudgetItem } from '../types';
 import type { Trip } from '../types';
-import { db } from '../firebase';
-import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+// Firebase imports disabled for local development
+// import { db } from '../firebase';
+// import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { alpha } from '@mui/material/styles';
 import { useTheme } from '@mui/material/styles';

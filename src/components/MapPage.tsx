@@ -5,8 +5,9 @@ import { Delete, Add, AutoAwesome as IdeasIcon, Route as RouteIcon, WrongLocatio
 import GoogleMapComponent from './GoogleMap';
 import PlaceSearch from './PlaceSearch';
 import type { Destination, Trip } from '../types';
-import { db } from '../firebase';
-import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+// Firebase imports disabled for local development
+// import { db } from '../firebase';
+// import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
@@ -23,8 +24,9 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
   const [showRoute, setShowRoute] = useState(false); // Controls route visibility
   const [suggestedIdeas, setSuggestedIdeas] = useState<Destination[]>([]);
   const [isFindingSuggestions, setIsFindingSuggestions] = useState(false);
+  const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
   const theme = useTheme();
-  const isMobile = window.innerWidth <= 600; // Add this line to define isMobile
+  const isMobile = window.innerWidth <= 600;
 
   useEffect(() => {
     const trip = trips.find(t => t.id === selectedTripId);
@@ -80,16 +82,24 @@ const MapPage: React.FC<MapPageProps> = ({ trips, selectedTripId, setSelectedTri
         toast.error("בחר טיול כדי להוסיף לו יעדים.");
         return;
     }
-    const tripRef = doc(db, 'trips', tripToUpdate.id);
-    await updateDoc(tripRef, { destinations: arrayUnion(newDestination) });
+    
+    // Local update only - Firebase disabled for development
+    // const tripRef = doc(db, 'trips', tripToUpdate.id);
+    // await updateDoc(tripRef, { destinations: arrayUnion(newDestination) });
+    
+    setDestinations(prev => [...prev, newDestination]);
     setSuggestedIdeas(prevIdeas => prevIdeas.filter(idea => idea.id !== newDestination.id));
     toast.success(`"${newDestination.name}" נוסף לטיול!`);
   };
 
   const handleDeleteDestination = async (destinationToDelete: Destination) => {
     if (!currentTrip) return;
-    const tripRef = doc(db, 'trips', currentTrip.id);
-    await updateDoc(tripRef, { destinations: arrayRemove(destinationToDelete) });
+    
+    // Local update only - Firebase disabled for development
+    // const tripRef = doc(db, 'trips', currentTrip.id);
+    // await updateDoc(tripRef, { destinations: arrayRemove(destinationToDelete) });
+    
+    setDestinations(prev => prev.filter(dest => dest.id !== destinationToDelete.id));
     toast.success('היעד נמחק מהמסלול!');
   };
 

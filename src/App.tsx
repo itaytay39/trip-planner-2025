@@ -38,9 +38,9 @@ import Checklist from './components/Checklist';
 import BottomNavigation from './components/BottomNavigation';
 import IdeasPage from './components/IdeasPage';
 
-// Import Firebase and Types
-import { db } from './firebase';
-import { collection, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'; 
+// Import Firebase and Types (commented out for local development)
+// import { db } from './firebase';
+// import { collection, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'; 
 import type { Trip, User } from './types';
 import toast from 'react-hot-toast';
 
@@ -563,7 +563,10 @@ function App() {
   const handleDeleteTrip = async (tripId: string) => {
     if (window.confirm("האם אתה בטוח שברצונך למחוק את הטיול הזה? אין דרך חזרה.")) {
         try {
-            await deleteDoc(doc(db, "trips", tripId));
+            // מחיקה מקומית מהנתונים
+            setTripsData(prevTrips => 
+              prevTrips ? prevTrips.filter(trip => trip.id !== tripId) : null
+            );
             toast.success("הטיול נמחק בהצלחה!");
         } catch (e) {
             toast.error("שגיאה במחיקת הטיול.");
@@ -595,25 +598,27 @@ function App() {
 
     if (isNewTrip) {
       try {
-        const { id, ...newTripData } = editingTrip;
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const _unusedId = id;
-        await addDoc(collection(db, "trips"), {
-          ...newTripData,
-          createdAt: serverTimestamp(),
-        });
+        // הוספת טיול חדש לנתונים המקומיים
+        const newTrip = {
+          ...editingTrip,
+          id: Date.now().toString(), // מזהה ייחודי פשוט
+        };
+        setTripsData(prevTrips => 
+          prevTrips ? [...prevTrips, newTrip] : [newTrip]
+        );
         toast.success("טיול חדש נוצר בהצלחה!");
       } catch (e) {
         toast.error("שגיאה ביצירת הטיול.");
         console.error("Error adding document: ", e);
       }
     } else {
-      const tripRef = doc(db, 'trips', editingTrip.id);
       try {
-        const { id, ...dataToUpdate } = editingTrip;
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const _unusedId = id;
-        await updateDoc(tripRef, dataToUpdate);
+        // עדכון טיול קיים בנתונים המקומיים
+        setTripsData(prevTrips => 
+          prevTrips ? prevTrips.map(trip => 
+            trip.id === editingTrip.id ? editingTrip : trip
+          ) : null
+        );
         toast.success("הטיול עודכן בהצלחה!");
       } catch (e) {
         toast.error("שגיאה בעדכון הטיול.");
