@@ -528,7 +528,7 @@ function App() {
   const theme = useTheme();
 
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_Maps_API_KEY || '',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyBOZhz8iV5FJYGQFx1234567890123456789',
     libraries,
   });
 
@@ -625,17 +625,25 @@ function App() {
   };
   
   const renderContent = () => {
-    if (!isLoaded || !userData || tripsData === null) {
+    if (!userData || tripsData === null) {
       return (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
           <CircularProgress />
-          <Typography sx={{ ml: 2 }}>טוען נתונים ומפה...</Typography>
+          <Typography sx={{ ml: 2 }}>טוען נתונים...</Typography>
         </Box>
       );
     }
 
-    if (loadError) {
-      return <Box>Error loading maps</Box>;
+    // Only show loading for map tab if maps are not loaded
+    if (activeTab === 'map' && (!isLoaded || loadError)) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+          <CircularProgress />
+          <Typography sx={{ ml: 2 }}>
+            {loadError ? 'שגיאה בטעינת המפה' : 'טוען מפה...'}
+          </Typography>
+        </Box>
+      );
     }
     
     switch (activeTab) {
