@@ -1,22 +1,21 @@
-// src/firebase.ts
+// src/firebase.ts - גרסה נקייה ללא Firebase Auth
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
-// הגדרות Firebase לפיתוח מקומי - ללא שגיאות Auth
+// הגדרות פיתוח מקומי - לא דורשות Firebase אמיתי
 const firebaseConfig = {
-  apiKey: "demo-api-key", // מפתח דמה לצורך פיתוח מקומי
-  authDomain: "demo-project.firebaseapp.com",
-  projectId: "demo-project",
-  storageBucket: "demo-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:demo"
+  apiKey: "local-dev-key",
+  authDomain: "local-dev.firebaseapp.com", 
+  projectId: "local-dev-project",
+  storageBucket: "local-dev-project.appspot.com",
+  messagingSenderId: "000000000000",
+  appId: "1:000000000000:web:localdev"
 };
 
-// אתחול האפליקציה
+// אתחול Firebase
 const app = initializeApp(firebaseConfig);
 
-// קבלת מופע Firestore
+// יצוא של Firestore בלבד
 export const db = getFirestore(app);
 
-// הערה למפתח: כדי להשתמש ב-Firebase אמיתי, 
-// החלף את הערכים למעלה בהגדרות הפרויקט שלך מ-Firebase Console
+// הערה: קובץ זה לא מכיל שום דבר הקשור ל-Firebase Auth
